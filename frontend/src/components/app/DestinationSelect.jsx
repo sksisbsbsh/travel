@@ -6,13 +6,13 @@ import {
 
 // INV-REF-02: destinasi booking = relasi ke master `destinations` — selector, bukan teks bebas.
 // Nilai warisan (pra-master) tetap ditampilkan sebagai opsi nonaktif agar dialog edit tidak rusak.
-export const DestinationSelect = ({ value, onChange, testId = "destination-select", placeholder = "Pilih destinasi" }) => {
+export const DestinationSelect = ({ value, onChange, testId = "destination-select", placeholder = "Pilih destinasi", optionsPath = "/bookings/destination-options" }) => {
   const [options, setOptions] = useState([]);
   useEffect(() => {
-    apiClient.get("/bookings/destination-options")
+    apiClient.get(optionsPath)
       .then((r) => setOptions(Array.isArray(r.data) ? r.data : []))
       .catch(() => setOptions([]));
-  }, []);
+  }, [optionsPath]);
   const known = options.some((o) => o.value === value);
   return (
     <Select value={value || ""} onValueChange={onChange}>

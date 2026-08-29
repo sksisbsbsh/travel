@@ -29,6 +29,8 @@ from _common import BACKEND, Guard, purge_guard_bookings  # noqa: E402
 BASE = "http://localhost:8001/api"
 REFS = BACKEND / "services" / "refs.py"
 BOOKINGS = BACKEND / "routers" / "bookings.py"
+LEADS = BACKEND / "routers" / "leads.py"
+PICKUPS = BACKEND / "routers" / "pickup_points.py"
 
 
 def req(method, path, token=None, body=None, timeout=30):
@@ -79,6 +81,24 @@ def static_checks(g: Guard):
     if "/bookings/destination-options" not in src:
         g.add("routers/bookings.py: endpoint `GET /bookings/destination-options` hilang — "
               "FE tak punya sumber pilihan, ops akan kembali mengetik bebas.")
+    # --- batch 2: titik jemput (bookings.origin) + destinasi lead ---
+    g.bump()
+    if "async def origin_or_400" not in refs:
+        g.add("services/refs.py: validator `origin_or_400` HILANG — titik jemput kembali teks bebas.")
+    g.bump()
+    if src.count("origin_or_400(") < 3:
+        g.add("routers/bookings.py: `origin_or_400` harus dipanggil di 3 jalur (create, group, "
+              "update) — ada jalur tulis titik jemput yang lolos validasi master.")
+    leads_src = read(LEADS)
+    g.bump()
+    if leads_src.count("destination_or_400(") < 2:
+        g.add("routers/leads.py: `destination_or_400` harus dipanggil di jalur create & update "
+              "lead — destinasi lead ERP kembali teks bebas.")
+    pk = read(PICKUPS)
+    g.bump()
+    if "/pickup-points" not in pk or "PickupPointCreate" not in pk:
+        g.add("routers/pickup_points.py: master titik jemput (GET/POST /pickup-points) hilang — "
+              "FE tak punya sumber pilihan/quick-add satu pintu.")
 
 
 def runtime_checks(g: Guard, tok: str):
@@ -111,6 +131,36 @@ def runtime_checks(g: Guard, tok: str):
     if st2 != 200 or not isinstance(opts, list) or not opts:
         g.add(f"Runtime: GET /bookings/destination-options gagal (HTTP {st2}) atau kosong — "
               f"selector FE tak punya pilihan.")
+    # --- batch 2: origin ngawur → 400 beralasan titik jemput; lead dest ngawur → 400 ---
+    body2 = dict(body, destination="Bali", origin="NgawurPoint Penjaga INV-REF-02")
+    st3, data3 = jreq("POST", "/bookings", tok, body2)
+    g.bump()
+    if st3 == 400:
+        detail = str((data3 or {}).get("detail") or "").lower()
+        if "titik jemput" not in detail and "master" not in detail:
+            g.add(f"Runtime: origin ngawur ditolak karena alasan LAIN ('{detail[:80]}') — "
+                  f"validasi master titik jemput tidak terbukti bekerja.")
+    elif 200 <= st3 < 300:
+        g.add("Runtime: POST /bookings MENERIMA titik jemput di luar master (INV-REF-02 b2).")
+    else:
+        g.add(f"Runtime: respons tak terduga HTTP {st3} untuk origin ngawur (harus 400).")
+    st4, data4 = jreq("POST", "/leads", tok,
+                      {"customer_name": "Penjaga INV-REF-02 Lead", "pax": 1,
+                       "destination": "NgawurLand Penjaga INV-REF-02"})
+    g.bump()
+    if st4 == 400:
+        detail = str((data4 or {}).get("detail") or "").lower()
+        if "destinasi" not in detail and "master" not in detail:
+            g.add(f"Runtime: destinasi lead ngawur ditolak karena alasan LAIN ('{detail[:80]}').")
+    elif 200 <= st4 < 300:
+        g.add("Runtime: POST /leads MENERIMA destinasi di luar master — dokumen uji dibersihkan.")
+    else:
+        g.add(f"Runtime: respons tak terduga HTTP {st4} untuk destinasi lead ngawur (harus 400).")
+    st5, pkts = jreq("GET", "/pickup-points", tok)
+    g.bump()
+    if st5 != 200 or not isinstance(pkts, list) or not pkts:
+        g.add(f"Runtime: GET /pickup-points gagal (HTTP {st5}) atau kosong — selector titik "
+              f"jemput FE tak punya pilihan.")
 
 
 def main() -> int:

@@ -37,9 +37,16 @@ Owner (kontrol penuh + Pengaturan/Master Harga), Ops Admin (booking/dispatch), M
 - Verifikasi: testing_agent iteration_94 — backend 14/14, frontend 4/4 alur, 0 bug fungsional.
   Suite regresi baru: backend/tests/backend_test_rc_abcde.py.
 
+- **RC-E batch 2 (2026-08-29 sesi 2, BUG-0137)**: `bookings.origin` = relasi master baru
+  `pickup_points` (validator + quick-add satu pintu + selector FE + seed + migrasi
+  `scripts/migrate_ssot_batch2.py`); `leads.destination` ERP tervalidasi master (selector CRM),
+  jalur publik normalisasi lunak; **Alarm Harga Aneh** di Master Harga (deviasi unit vs tipe
+  >±50% → warning kuning + toast). Guardrail INV-REF-02/INV-PRICE-02 diperluas.
+  Verifikasi: testing_agent iteration_95 backend 100% + frontend 100%; gate HIJAU 46/46.
+
 ## Backlog Terprioritisasi
-- **P1 — RC-E batch berikutnya**: audit sisa field free-text → relasi (mis. `origin` booking,
-  destinasi pada leads/quotation draft, kategori lain) — bertahap per field + gate + testing_agent
+- **P1 — RC-E batch 3**: sisa field free-text kandidat relasi (mis. destinasi pada quotation
+  draft publik, kategori/label lain hasil audit) — bertahap per field + gate + testing_agent
 - **P2**: kredensial nyata Meta/Google/WA/GA4 (menunggu user); migrasi media ke objstore
   (MEDIA_BACKEND masih local); load test (setelah integritas data beres)
 - **P2**: batas/anggaran harga per tipe di Master Harga (saran reviewer: sudah ada cap 100 jt/unit)

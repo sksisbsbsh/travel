@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatters";
 import DestinationSelect from "@/components/app/DestinationSelect";
+import PickupPointSelect from "@/components/app/PickupPointSelect";
 
 function toIso(localValue) {
   if (!localValue) return "";
@@ -156,8 +157,8 @@ export default function BookingFormDialog({ open, onOpenChange, onCreated, initi
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[12px] font-semibold text-[#6B6B73]">Asal</label>
-              <Input value={form.origin} onChange={(e) => set("origin", e.target.value)} placeholder="Bandung" data-testid="bf-origin" />
+              <label className="mb-1 block text-[12px] font-semibold text-[#6B6B73]">Titik Jemput (master)</label>
+              <PickupPointSelect value={form.origin} onChange={(v) => set("origin", v)} testId="bf-origin" />
             </div>
             <div>
               <label className="mb-1 block text-[12px] font-semibold text-[#6B6B73]">Tujuan (master destinasi)</label>

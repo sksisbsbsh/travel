@@ -78,6 +78,11 @@ audit_logs, settings, user_onboarding
   · **E11 (Driver Payroll/HR Lite)**: akses section `finance` (owner/ops_admin). Generator akrual dari trip SELESAI dalam periode + gaji pokok & komponen kompensasi (`drivers.comp`). Alur draft→approved→paid; approve buat expense `gaji_driver` (akrual P&L), pay tandai expense lunas (kas). Hanya draft yang bisa diubah/hapus. Slip PDF+Excel.
 ### trip_shares
 `id(shr_)`, `token`(rahasia, untuk URL publik), `trip_id`(trp_), `vehicle_id`(veh_, nullable snapshot), `label`, `expires_at`(ISO), `revoked`(bool), `revoked_at`, `created_by`(usr_), `last_accessed_at`, `access_count`(int), `created_at`
+### pickup_points (master titik jemput — INV-REF-02 batch 2)
+`id(pkp_)`, `name` (unik case-insensitive), `created_at`
+Relasi: `bookings.origin` menyimpan NAMA KANONIK dari master ini (validator `refs.origin_or_400`;
+quick-add via `POST /api/pickup-points`).
+
 ### destinations (public content)
 `id(dst_)`, `slug`, `name`, `region`(jawa_*|bali), `description`, `hero_image`, `gallery[]`, `hotel_recommendations[]`({name,rating,price_range}), `popular`(bool), `created_at`
   · **P10/FASE 3 (destinasi immersif)**: `intro`, `highlights[]`, `itinerary[]`({day,title,detail}), `route_points[]`({name,lat,lng,note}), `faqs[]`({q,a}), `best_time`, `lat`(num), `lng`(num), `tour_scenes[]`({id,label,panorama,thumbnail,links[]})

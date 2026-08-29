@@ -81,6 +81,10 @@ def main() -> int:
     if "resolve_day_rate" not in quote_block:
         g.add("routers/pricing.py quote(): tidak memakai `resolve_day_rate` — angka 'Hitung "
               "Otomatis' yang dilihat ops kembali BERBEDA dari yang ditagih mesin (BUG-0132).")
+    g.bump()
+    if "_rate_deviation" not in pricing or "DEVIATION_ALARM_PCT" not in pricing:
+        g.add("routers/pricing.py: alarm deviasi harga (`_rate_deviation`/DEVIATION_ALARM_PCT) "
+              "hilang — salah ketik tarif unit tidak lagi diperingatkan ke ops.")
 
     vform = read(VFORM)
     for field in ("day_rate", "price_from"):

@@ -88,7 +88,7 @@ async def run():
                    # dan tabel pengalihan menunjuk slug yang sudah lenyap.
                    "content_versions", "content_trash", "content_redirects",
                    # Pemesanan online publik (rute antar-jemput + bukti transfer pelanggan)
-                   "transfer_routes", "payment_proofs"]
+                   "transfer_routes", "payment_proofs", "pickup_points"]
     for c in COLLECTIONS:
         await db[c].delete_many({})
 
@@ -495,9 +495,9 @@ async def run():
               "Mau sewa Hiace untuk wisata keluarga", 0),
         _lead("PT Sinar Event", "08151002222", "event@sinar.id", "manual", "contacted", ops_id, "Yogyakarta", 6, 25,
               "Gathering kantor 25 orang", 12000000, {"contacted_at": now_iso()}),
-        _lead("Rina Wedding Organizer", "08152003333", "rina@wo.id", "whatsapp", "quoted", ops_id, "Bromo", 3, 14,
+        _lead("Rina Wedding Organizer", "08152003333", "rina@wo.id", "whatsapp", "quoted", ops_id, "Gunung Bromo", 3, 14,
               "Antar-jemput tamu acara", 8500000, {"contacted_at": now_iso()}),
-        _lead("Komunitas Goes Bandung", "08153004444", "goes@komunitas.id", "website", "negotiation", owner_id, "Dieng", 1, 30,
+        _lead("Komunitas Goes Bandung", "08153004444", "goes@komunitas.id", "website", "negotiation", owner_id, "Dataran Tinggi Dieng", 1, 30,
               "Trip komunitas sepeda, butuh 2 unit", 15000000, {"contacted_at": now_iso()}),
         _lead("CV Sentosa Wisata", "08154005555", "sales@sentosa.id", "manual", "won", ops_id, "Bandung", 12, 19,
               "Repeat order rombongan", 20000000,
@@ -556,6 +556,13 @@ async def run():
                 "best_time": best_time, "lat": lat, "lng": lng, "tour_scenes": [],
                 "popular": popular, "created_at": now_iso()}
 
+    await db.pickup_points.insert_many([
+        # INV-REF-02 batch 2: master TITIK JEMPUT (relasi bookings.origin — bukan teks bebas).
+        {"id": new_id("pkp"), "name": "Bandung", "created_at": now_iso()},
+        {"id": new_id("pkp"), "name": "Jakarta", "created_at": now_iso()},
+        {"id": new_id("pkp"), "name": "Bandara Soekarno-Hatta", "created_at": now_iso()},
+        {"id": new_id("pkp"), "name": "Stasiun Bandung", "created_at": now_iso()},
+    ])
     await db.destinations.insert_many([
         # INV-REF-02: destinasi OPERASIONAL (master utk booking ERP) — status 'draft' agar
         # TIDAK tayang di situs publik (visibility_filter menuntut 'published').
@@ -829,7 +836,7 @@ async def run():
         "holidays": [iso(_now + timedelta(days=30))[:10], iso(_now + timedelta(days=31))[:10]]}})
     # B1 — Pricing Engine: tarif/surcharge/DP konfigurabel (diedit di Pengaturan).
     await db.settings.insert_one({"key": "pricing_rules", "value": {
-        "day_rates": {"hiace_premio": 1500000, "hiace": 1200000, "elf": 1600000,
+        "day_rates": {"hiace_premio": 1500000, "hiace": 1200000, "elf": 2000000,
                       "bus": 2500000, "avanza": 900000},
         # fuel_per_km DIHAPUS: komponen berbasis jarak tidak lagi memengaruhi harga
         # (jarak dulu diisi pengunjung lewat penggeser → harga tak bisa dipertanggungjawabkan).

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BadgeDollarSign, Loader2, Save } from "lucide-react";
+import { BadgeDollarSign, Loader2, Save, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/services/apiClient";
 import { Input } from "@/components/ui/input";
@@ -30,8 +30,9 @@ export const UnitRatesPanel = () => {
     if (raw === undefined) return;
     setSavingId(r.id);
     try {
-      await apiClient.patch(`/pricing/unit-rates/${r.id}`, { day_rate: Number(raw) || 0 });
-      toast.success(`Tarif ${r.name} disimpan`);
+      const { data } = await apiClient.patch(`/pricing/unit-rates/${r.id}`, { day_rate: Number(raw) || 0 });
+      if (data?.warning) toast.warning(data.warning, { duration: 8000 });
+      else toast.success(`Tarif ${r.name} disimpan`);
       await load();
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Gagal menyimpan tarif unit");
@@ -61,6 +62,11 @@ export const UnitRatesPanel = () => {
                 <span className="block text-[11px] text-[#8E8E93]">
                   {r.code} · {r.type_label} · efektif {formatCurrency(r.effective_rate)}/hari ({r.rate_basis})
                 </span>
+                {r.warning ? (
+                  <span className="mt-0.5 flex items-start gap-1 text-[11px] font-semibold text-[#B45309]" data-testid={`unit-rate-warning-${r.id}`}>
+                    <AlertTriangle size={11} className="mt-0.5 shrink-0" /> {r.warning}
+                  </span>
+                ) : null}
               </div>
               <Input type="number" className="!h-9 max-w-[160px]"
                 value={drafts[r.id] ?? (r.day_rate || "")}

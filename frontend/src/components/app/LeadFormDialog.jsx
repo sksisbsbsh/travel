@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DestinationSelect from "@/components/app/DestinationSelect";
 
 const SRC = [["manual", "Manual"], ["whatsapp", "WhatsApp"], ["website", "Website"]];
 const EMPTY = { customer_name: "", phone: "", email: "", source: "manual", destination: "", trip_date: "", pax: "", value: "", message: "", assigned_to: "auto" };
@@ -46,7 +47,7 @@ export default function LeadFormDialog({ open, onOpenChange, agents, onSaved }) 
               </Select></div>
             <div className="space-y-1.5"><Label>Telepon</Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="0812xxxx" data-testid="lf-phone" /></div>
             <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} data-testid="lf-email" /></div>
-            <div className="space-y-1.5"><Label>Destinasi</Label><Input value={form.destination} onChange={(e) => set("destination", e.target.value)} placeholder="Bali…" data-testid="lf-dest" /></div>
+            <div className="space-y-1.5"><Label>Destinasi (master)</Label><DestinationSelect value={form.destination} onChange={(v) => set("destination", v)} testId="lf-dest" optionsPath="/leads/destination-options" /></div>
             <div className="space-y-1.5"><Label>Tanggal trip</Label><Input type="date" value={form.trip_date} onChange={(e) => set("trip_date", e.target.value)} data-testid="lf-date" /></div>
             <div className="space-y-1.5"><Label>Pax</Label><Input type="number" min="1" value={form.pax} onChange={(e) => set("pax", e.target.value)} data-testid="lf-pax" /></div>
             <div className="space-y-1.5"><Label>Nilai (Rp)</Label><Input type="number" value={form.value} onChange={(e) => set("value", e.target.value)} data-testid="lf-value" /></div>

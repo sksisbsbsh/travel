@@ -301,6 +301,11 @@ class PublicBookingCreate(BaseModel):
 
 
 # === Phase 9 / Tahap B · B1: Pricing Engine ===
+class PickupPointCreate(BaseModel):
+    """INV-REF-02 batch 2: master titik jemput (quick-add dari form booking = tetap satu pintu master)."""
+    name: str = Field(min_length=2, max_length=120)
+
+
 class UnitDayRateUpdate(BaseModel):
     """Master Harga (RC-B): tulis tarif per unit. 0 = hapus override (pakai tarif tipe)."""
     day_rate: float = Field(default=0, ge=0, le=100_000_000)  # batas atas anti salah ketik

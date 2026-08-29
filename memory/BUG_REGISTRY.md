@@ -27,6 +27,22 @@
 
 ## REGISTRY
 
+### BUG-0137 — SSOT batch 2: titik jemput & destinasi lead masih teks bebas — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-E batch 2 / bookings.origin + leads.destination
+- Gejala        : Titik jemput booking & destinasi lead diketik bebas ("bandung" vs "Bandung");
+                  laporan & pencocokan antar-entitas tidak konsisten.
+- Root Cause    : lanjutan BUG-0135 — field relasional tersisa yang belum ber-master.
+- Perbaikan     : master baru `pickup_points` (pkp_) + `refs.origin_or_400` (create/group/update
+                  booking) + quick-add satu pintu `POST /api/pickup-points` + selector FE
+                  `PickupPointSelect`; destinasi lead ERP via `destination_or_400` + selector
+                  (`GET /leads/destination-options`); jalur PUBLIK lead memakai
+                  `destination_normalize` LUNAK (inbound eksternal tak ditolak); migrasi
+                  `scripts/migrate_ssot_batch2.py`; seed dikanonikkan. Bonus: alarm deviasi
+                  Master Harga (unit vs tipe >±50% → warning kuning + toast, INV-PRICE-02).
+- Regression    : INV-REF-02 diperluas (statik+runtime origin & lead), INV-PRICE-02 cek alarm.
+- Status        : FIXED (bukti: curl 400 beralasan; 'bandung'→'Bandung'; warning 233% muncul)
+
 ### BUG-0132 — Quote "Hitung Otomatis" booking ERP mengabaikan tarif per unit — FIXED 2026-08-29
 - Tanggal       : 2026-08-29
 - Fase/Modul    : RC-A / routers/pricing.py (`POST /api/pricing/quote`)

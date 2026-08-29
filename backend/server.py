@@ -24,6 +24,7 @@ from routers import (  # noqa: E402
     bookings,
     booking_admin,
     booking_public,
+    pickup_points,
     transfer_routes,
     broadcasts,
     campaigns,
@@ -93,6 +94,7 @@ app.include_router(customers.router)
 # (FastAPI memakai kecocokan PERTAMA) sehingga antrean bukti bayar balas 404 — ditemukan POC.
 app.include_router(booking_admin.router)    # verifikasi bukti DP + ACC permintaan web (ops)
 app.include_router(bookings.router)
+app.include_router(pickup_points.router)    # master titik jemput (INV-REF-02 batch 2)
 app.include_router(booking_public.router)   # pemesanan online publik (cari > pesan > bayar DP)
 app.include_router(transfer_routes.router)  # rute antar-jemput bandara + tarif flat
 app.include_router(departures.router)  # lapisan risiko kalender keberangkatan

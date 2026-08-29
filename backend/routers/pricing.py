@@ -26,6 +26,23 @@ router = APIRouter(prefix="/api", tags=["pricing"])
 SETTINGS = require_section("settings")
 
 
+DEVIATION_ALARM_PCT = 50  # alarm harga aneh: tarif unit menyimpang >±50% dari tarif tipenya
+
+
+def _rate_deviation(rules, vehicle: dict):
+    """(type_rate, deviation_pct, warning) — warning terisi bila override unit menyimpang jauh."""
+    override = int(round(float(vehicle.get("day_rate") or 0)))
+    type_rate, _b = resolve_day_rate(rules, vehicle={"type": vehicle.get("type")})
+    if override <= 0 or type_rate <= 0:
+        return type_rate, None, ""
+    dev = round((override - type_rate) / type_rate * 100)
+    if abs(dev) < DEVIATION_ALARM_PCT:
+        return type_rate, dev, ""
+    arah = "di ATAS" if dev > 0 else "di BAWAH"
+    return type_rate, dev, (f"Tarif unit menyimpang {abs(dev)}% {arah} tarif tipe "
+                            f"({type_label(vehicle.get('type'))} Rp {type_rate:,}) — periksa salah ketik.".replace(",", "."))
+
+
 async def _holidays(db):
     op = await db.settings.find_one({"key": "operational"}, {"_id": 0})
     if op and isinstance(op.get("value"), dict):
@@ -50,8 +67,10 @@ async def list_unit_rates(user=Depends(SETTINGS)):
     out = []
     for v in rows:
         rate, basis = resolve_day_rate(rules, vehicle=v)
+        type_rate, dev, warning = _rate_deviation(rules, v)
         out.append({**v, "type_label": type_label(v.get("type")),
-                    "effective_rate": rate, "rate_basis": basis})
+                    "effective_rate": rate, "rate_basis": basis,
+                    "type_rate": type_rate, "deviation_pct": dev, "warning": warning})
     return safe_doc(out)
 
 
@@ -69,7 +88,9 @@ async def set_unit_rate(vehicle_id: str, body: UnitDayRateUpdate, user=Depends(S
     rules = await get_pricing_rules(db)
     vehicle["day_rate"] = new_rate
     rate, basis = resolve_day_rate(rules, vehicle=vehicle)
-    return {"id": vehicle_id, "day_rate": new_rate, "effective_rate": rate, "rate_basis": basis}
+    _type_rate, dev, warning = _rate_deviation(rules, vehicle)
+    return {"id": vehicle_id, "day_rate": new_rate, "effective_rate": rate, "rate_basis": basis,
+            "deviation_pct": dev, "warning": warning}
 
 
 @router.post("/pricing/quote")

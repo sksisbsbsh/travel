@@ -24,6 +24,7 @@ from services import content_publish as cp
 from services import content_redirects as credirects
 from services import content_stats as cstats
 from services import i18n
+from services.refs import destination_normalize
 from services import landing_stats
 from services import reviews as review_svc
 from services.crm import auto_assign_agent, log_activity
@@ -292,7 +293,7 @@ async def public_quotation(body: QuotationCreate, request: Request):
         "id": new_id("led"), "customer_name": body.name.strip(),
         "phone": body.phone or "", "email": body.email or "",
         "source": "website", "stage": "new", "assigned_to": assigned,
-        "destination": body.destination or "", "trip_date": body.trip_date,
+        "destination": await destination_normalize(db, body.destination), "trip_date": body.trip_date,
         "pax": int(body.pax or 0), "message": body.message or "",
         "value": 0.0, "quotation_amount": 0, "converted_customer_id": None,
         "marketing_consent": consent, "consent_at": now_iso() if consent else None,
@@ -631,7 +632,8 @@ async def public_landing_lead(slug: str, body: LandingLeadCreate, request: Reque
     doc = {
         "id": new_id("led"), "customer_name": name, "phone": phone, "email": (body.email or "")[:160],
         "source": "landing_page", "stage": "new", "assigned_to": assigned,
-        "origin": (body.origin or "")[:200], "destination": (body.destination or "")[:200],
+        "origin": (body.origin or "")[:200],
+        "destination": await destination_normalize(db, (body.destination or "")[:200]),
         "trip_date": (body.start or None), "trip_end_date": (body.end or None),
         "pax": int(body.pax or 0), "vehicle_type": (body.vehicle_type or "")[:60],
         "message": (body.message or "")[:1000],

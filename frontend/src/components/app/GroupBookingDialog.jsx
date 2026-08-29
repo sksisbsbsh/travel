@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatters";
 import DestinationSelect from "@/components/app/DestinationSelect";
+import PickupPointSelect from "@/components/app/PickupPointSelect";
 
 function toIso(localValue) {
   if (!localValue) return "";
@@ -215,8 +216,8 @@ export default function GroupBookingDialog({ open, onOpenChange, onCreated }) {
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[11px] font-semibold text-[#6B6B73]">Asal</label>
-                        <Input value={u.origin} onChange={(e) => setUnit(idx, { origin: e.target.value })} placeholder="Bandung" data-testid={`gb-origin-${idx}`} />
+                        <label className="mb-1 block text-[11px] font-semibold text-[#6B6B73]">Titik Jemput (master)</label>
+                        <PickupPointSelect value={u.origin} onChange={(v) => setUnit(idx, { origin: v })} testId={`gb-origin-${idx}`} />
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] font-semibold text-[#6B6B73]">Tujuan (master destinasi)</label>

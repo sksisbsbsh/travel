@@ -153,3 +153,39 @@ async def destination_or_400(db, value, *, field_label: str = "Destinasi"):
     raise _bad(f"{field_label} '{raw[:40]}' tidak ada di master destinasi. "
                f"Pilih dari master (mis. {contoh}) atau tambahkan dulu di master destinasi.")
 
+
+async def origin_or_400(db, value, *, field_label: str = "Titik jemput"):
+    """INV-REF-02 batch 2: titik jemput booking ERP WAJIB dari master `pickup_points`.
+
+    Kosong = sah. Cocok case-insensitive vs `name`; tersimpan NAMA KANONIK master.
+    Ops bisa menambah titik baru lewat POST /api/pickup-points (quick-add) — tetap satu pintu.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    low = raw.lower()
+    rows = await db.pickup_points.find(
+        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1}).to_list(500)
+    for p in rows:
+        if str(p.get("name") or "").strip().lower() == low:
+            return str(p.get("name")).strip()
+    names = sorted({str(p.get("name") or "").strip() for p in rows if p.get("name")})
+    contoh = ", ".join(names[:8]) or "-"
+    raise _bad(f"{field_label} '{raw[:40]}' tidak ada di master titik jemput. "
+               f"Pilih dari master (mis. {contoh}) atau tambahkan lewat tombol + di form.")
+
+
+async def destination_normalize(db, value):
+    """Normalisasi LUNAK utk jalur PUBLIK (lead web/landing): cocok master → nama kanonik;
+    tidak cocok → simpan apa adanya. Lead inbound eksternal TIDAK BOLEH ditolak — batas
+    validasi keras (destination_or_400) hanya utk jalur tulis internal ERP."""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    low = raw.lower()
+    rows = await db.destinations.find(
+        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).to_list(500)
+    for d in rows:
+        if str(d.get("name") or "").strip().lower() == low or str(d.get("slug") or "").strip().lower() == low:
+            return str(d.get("name") or raw).strip()
+    return raw

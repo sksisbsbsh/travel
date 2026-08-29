@@ -20,6 +20,7 @@ from services.crm import (LEAD_STAGE_SET, LEAD_STAGES, OPEN_STAGES, STAGE_LABEL,
 from services.events import emit
 from services.growth import apply_lead_growth
 from services.identity import ensure_customer, find_customer_by_identity, normalize_phone
+from services.refs import destination_or_400
 
 router = APIRouter(prefix="/api", tags=["leads"])
 CRM = require_section("crm")
@@ -120,9 +121,20 @@ async def lead_reminders(limit: int = Query(default=2000, le=2000), user=Depends
     return out
 
 
+@router.get("/leads/destination-options")
+async def lead_destination_options(user=Depends(CRM)):
+    """INV-REF-02 batch 2: pilihan destinasi utk form lead CRM — dari master `destinations`."""
+    rows = await get_db().destinations.find(
+        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
+    return [{"value": r.get("name"), "label": r.get("name"), "slug": r.get("slug")}
+            for r in rows if r.get("name")]
+
+
 @router.post("/leads")
 async def create_lead(body: LeadCreate, user=Depends(CRM)):
     db = get_db()
+    # INV-REF-02 batch 2: destinasi lead ERP wajib dari master (jalur publik: normalisasi lunak).
+    destination = await destination_or_400(db, body.destination, field_label="Destinasi lead")
     stage = body.stage if body.stage in LEAD_STAGE_SET else "new"
     assigned = body.assigned_to
     if assigned:
@@ -138,7 +150,7 @@ async def create_lead(body: LeadCreate, user=Depends(CRM)):
         "id": new_id("led"), "customer_name": body.customer_name.strip(),
         "phone": body.phone or "", "phone_normalized": norm, "email": body.email or "",
         "source": body.source or "manual", "stage": stage, "assigned_to": assigned,
-        "destination": body.destination or "", "trip_date": body.trip_date,
+        "destination": destination, "trip_date": body.trip_date,
         "pax": int(body.pax or 0), "message": body.message or "",
         "value": val, "quotation_amount": val, "converted_customer_id": None,
         "linked_customer_id": linked["id"] if linked else None,
@@ -186,6 +198,10 @@ async def update_lead(lead_id: str, body: LeadUpdate, user=Depends(CRM)):
     if not lead:
         raise HTTPException(status_code=404, detail="Lead tidak ditemukan")
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    # INV-REF-02: destinasi hanya divalidasi bila DIUBAH (lead lama nilai warisan tetap bisa diedit).
+    if "destination" in updates and updates["destination"] != lead.get("destination"):
+        updates["destination"] = await destination_or_400(db, updates["destination"],
+                                                          field_label="Destinasi lead")
     if updates.get("assigned_to") and not await db.users.find_one({"id": updates["assigned_to"]}):
         raise HTTPException(status_code=400, detail="Agen tidak ditemukan")
     if "value" in updates:

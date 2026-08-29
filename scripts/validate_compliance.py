@@ -37,6 +37,8 @@ CANONICAL = {"users","sessions","vehicles","drivers","customers","leads","conver
     "ad_touches","audience_syncs","platform_leads","media_assets","landing_pages",
     # Pemesanan online publik — lihat docs/03_DATA_MODEL.md § Pemesanan Online
     "transfer_routes","payment_proofs",
+    # INV-REF-02 batch 2: master titik jemput (relasi bookings.origin)
+    "pickup_points",
     # CMS-CW2 (draft/jadwal, funnel ulasan, analitik konten) — docs/03_DATA_MODEL.md §7
     "content_previews","review_requests","content_stats",
     # CMS-CW3 (riwayat versi, tempat sampah, pengalihan URL) — docs/03_DATA_MODEL.md §8

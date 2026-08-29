@@ -1,7 +1,16 @@
 # 🤝 HANDOFF — Rahaza Travel ERP
 
 > **Bahasa kerja: Indonesia.** Agent berikutnya WAJIB merespons user dalam Bahasa Indonesia.
-> **Diperbarui:** 2026-08-29 (**SESI RC-A..RC-E**: 5 keluhan user diperbaiki — BUG-0132..0136 di
+> **Diperbarui:** 2026-08-29 sesi 2 (**SSOT BATCH 2 + ALARM HARGA**, BUG-0137: `bookings.origin` =
+> relasi master baru `pickup_points` (pkp_, `refs.origin_or_400`, quick-add satu pintu
+> `POST /api/pickup-points`, selector FE `PickupPointSelect` dgn dedupe); `leads.destination`
+> jalur ERP divalidasi `destination_or_400` (+`GET /leads/destination-options`), jalur PUBLIK
+> memakai `destination_normalize` LUNAK; alarm deviasi Master Harga (unit vs tipe >±50% →
+> warning kuning + toast, `_rate_deviation` di routers/pricing.py); migrasi
+> `scripts/migrate_ssot_batch2.py`; INV-REF-02 & INV-PRICE-02 diperluas. Gate HIJAU 46/46,
+> testing_agent iteration_95: backend 100%, frontend 100%. Sesi 1 hari yang sama: RC-A..RC-E
+> BUG-0132..0136 — lihat paragraf di bawah.)
+> **Sesi 1:** (**SESI RC-A..RC-E**: 5 keluhan user diperbaiki — BUG-0132..0136 di
 > `memory/BUG_REGISTRY.md`. (1) RC-A: `/pricing/quote` kini `resolve_day_rate` (angka yang dilihat
 > ops = yang ditagih); (2) RC-B: **Master Harga tunggal** — `day_rate`/`price_from` DIHAPUS dari
 > jalur tulis armada, tarif unit hanya via Pengaturan → panel `UnitRatesPanel`
