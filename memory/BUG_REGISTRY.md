@@ -27,6 +27,32 @@
 
 ## REGISTRY
 
+### BUG-0138 — SSOT batch 3 + Master Data + Lead→Booking — IMPLEMENTED, MENUNGGU gate+testing_agent (HANDOFF §STATUS SESI TERAKHIR)
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-E batch 3 / quotations.destination, form penawaran publik, halaman Master Data, konversi lead
+- Gejala        : (a) destinasi PENAWARAN (ERP & form web publik) masih teks bebas;
+                  (b) tidak ada tempat kelola master (rename/nonaktif) — rename manual di DB
+                  akan membuat nama bercabang; (c) lead menang harus disalin manual jadi booking.
+- Perbaikan     : (a) quotations create/update via `destination_or_400` (update hanya-bila-diubah);
+                  form publik memakai select dari `GET /api/public/destination-options`
+                  (backend publik tetap LUNAK via `destination_normalize`);
+                  QuotationFormDialog pakai selector master (`/leads/destination-options`).
+                  (b) halaman baru `/app/masterdata` (section `masterdata`, owner+ops_admin;
+                  RBAC 3 lapis: allowlist FE + RoleGuard + SECTION_ACCESS): kelola titik jemput
+                  & destinasi — RENAME CASCADE (bookings/leads/quotations via
+                  `PATCH /api/master/pickup-points/{id}` & `/api/master/destinations/{id}`),
+                  NONAKTIF menyembunyikan dari semua selector + ditolak pemakaian baru
+                  (filter `active`/`ops_active` di refs + endpoint options).
+                  (c) `POST /api/leads/{id}/prepare-booking` (ensure_customer dedupe + prefill)
+                  + tombol "Jadikan Booking" di drawer lead → BookingFormDialog prefilled;
+                  setelah booking dibuat lead otomatis stage `won` + aktivitas tercatat.
+- Regression    : INV-REF-02 diperluas (+5 cek: quotations, public options, master cascade);
+                  INV-RBAC otomatis mencakup section `masterdata`.
+- Status        : IMPLEMENTED & terverifikasi manual/curl (rename Bandung→Bandung Kota cascade
+                  8 booking lalu dikembalikan; toggle Jakarta hilang dari options; prepare-booking
+                  mengembalikan prefill). **BELUM**: gate.sh penuh pasca-batch-3, testing_agent,
+                  update INVARIANTS.md & PRD.md — daftar tugasnya di HANDOFF §STATUS SESI TERAKHIR.
+
 ### BUG-0137 — SSOT batch 2: titik jemput & destinasi lead masih teks bebas — FIXED 2026-08-29
 - Tanggal       : 2026-08-29
 - Fase/Modul    : RC-E batch 2 / bookings.origin + leads.destination

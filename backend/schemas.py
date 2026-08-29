@@ -306,6 +306,18 @@ class PickupPointCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
 
 
+class PickupPointUpdate(BaseModel):
+    """Master Data: rename (cascade ke bookings.origin) / aktif-nonaktif."""
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    active: Optional[bool] = None
+
+
+class MasterDestinationUpdate(BaseModel):
+    """Master Data: rename destinasi (cascade booking/lead/penawaran) / toggle ops_active."""
+    name: Optional[str] = Field(default=None, min_length=2, max_length=160)
+    ops_active: Optional[bool] = None
+
+
 class UnitDayRateUpdate(BaseModel):
     """Master Harga (RC-B): tulis tarif per unit. 0 = hapus override (pakai tarif tipe)."""
     day_rate: float = Field(default=0, ge=0, le=100_000_000)  # batas atas anti salah ketik

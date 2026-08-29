@@ -377,7 +377,8 @@ async def create_group_booking(body: GroupBookingCreate, user=Depends(MANAGER)):
 async def booking_destination_options(user=Depends(BOOKINGS)):
     """INV-REF-02: pilihan destinasi utk form booking ERP — dari master `destinations`."""
     rows = await get_db().destinations.find(
-        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
+        {"deleted": {"$ne": True}, "ops_active": {"$ne": False}},
+        {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
     return [{"value": r.get("name"), "label": r.get("name"), "slug": r.get("slug")}
             for r in rows if r.get("name")]
 

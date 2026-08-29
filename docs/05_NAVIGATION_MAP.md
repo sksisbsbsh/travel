@@ -100,6 +100,9 @@ SHELL: Sidebar (grouped, role-filtered) + TopBar + (optional) Right Detail Panel
 🚐 Armada (vehicles)          — master + reminder KIR/pajak/servis
 👤 Driver (drivers)            — master + SIM + histori
 📇 Customer 360 (customers)
+🗂️ Referensi Jemput & Destinasi (masterdata) — Master Data SSOT (INV-REF-02): kelola TITIK JEMPUT
+   (`pickup_points`) & DESTINASI sisi ops. Ganti nama = CASCADE ke booking/lead/penawaran;
+   nonaktif = hilang dari selector form (data lama utuh). Owner + ops_admin.
 💬 CRM
    ├─ Pipeline (kanban)
    ├─ Skor & SLA (Scoreboard: lead scoring + SLA/aging + recompute)
@@ -172,6 +175,7 @@ SHELL: Sidebar (grouped, role-filtered) + TopBar + (optional) Right Detail Panel
 | Armada | ✅ Full | ✅ Full | ❌ | 👁️ read |
 | Driver | ✅ Full | ✅ Full | ❌ | 👁️ profil sendiri |
 | Customer 360 | ✅ | ✅ | ✅ | ❌ |
+| Referensi Jemput & Destinasi (masterdata) | ✅ Full | ✅ Full | ❌ | ❌ |
 | CRM | ✅ | ✅ | ✅ | ❌ |
 | Otomasi (automation) | ✅ Full | ✅ (monitoring) | ❌ | ❌ |
 | Penawaran (quotations) | ✅ | ✅ | ❌ | ❌ |

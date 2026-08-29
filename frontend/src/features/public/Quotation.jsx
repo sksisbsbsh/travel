@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Send, Loader2, MapPin, Users, Phone, Mail, User, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,13 @@ export default function Quotation() {
     name: "", phone: "", email: "", destination: st.destination || "",
     trip_date: st.trip_date || "", pax: st.pax || "", message: st.message || "", hp: "",
   });
+  // INV-REF-02 batch 3: destinasi form publik = pilihan ber-master (bukan ketik bebas).
+  const [destOptions, setDestOptions] = useState([]);
+  useEffect(() => {
+    apiClient.get("/public/destination-options")
+      .then((r) => setDestOptions(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setDestOptions([]));
+  }, []);
   const [consent, setConsent] = useState(true);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -68,7 +75,11 @@ export default function Quotation() {
             <div className="sm:col-span-2"><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("Nama Lengkap *", "Full Name *", lang)}</label><div className={field}><User size={15} className="text-[#9aa0ad]" /><input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder={bi("Nama / instansi", "Name / organisation", lang)} className={input} data-testid="q-name" /></div></div>
             <div><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("No. WhatsApp *", "WhatsApp No. *", lang)}</label><div className={field}><Phone size={15} className="text-[#9aa0ad]" /><input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="0812xxxx" className={input} data-testid="q-phone" /></div></div>
             <div><label className="text-[13px] font-medium text-[#3a3f4a]">Email</label><div className={field}><Mail size={15} className="text-[#9aa0ad]" /><input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="email@domain.id" className={input} data-testid="q-email" /></div></div>
-            <div><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("Destinasi", "Destination", lang)}</label><div className={field}><MapPin size={15} className="text-[#9aa0ad]" /><input value={form.destination} onChange={(e) => set("destination", e.target.value)} placeholder="Bali, Bromo…" className={input} data-testid="q-destination" /></div></div>
+            <div><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("Destinasi", "Destination", lang)}</label><div className={field}><MapPin size={15} className="text-[#9aa0ad]" /><select value={form.destination} onChange={(e) => set("destination", e.target.value)} className={`${input} bg-transparent`} data-testid="q-destination">
+              <option value="">{bi("Pilih destinasi…", "Choose destination…", lang)}</option>
+              {form.destination && !destOptions.some((o) => o.value === form.destination) ? <option value={form.destination}>{form.destination}</option> : null}
+              {destOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select></div></div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("Tanggal", "Date", lang)}</label><input type="date" value={form.trip_date} onChange={(e) => set("trip_date", e.target.value)} className="mt-1 w-full rounded-lg border border-[#dfe1e8] px-3 py-2.5 text-[14px] outline-none" data-testid="q-date" /></div>
               <div><label className="text-[13px] font-medium text-[#3a3f4a]">{bi("Pax", "Pax", lang)}</label><div className={field}><Users size={15} className="text-[#9aa0ad]" /><input type="number" min="1" value={form.pax} onChange={(e) => set("pax", e.target.value)} placeholder="10" className={input} data-testid="q-pax" /></div></div>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusPill } from "@/components/shared/StatusPill";
 import { formatDate, formatDateTime } from "@/utils/formatters";
 import QuotationFormDialog from "@/components/app/QuotationFormDialog";
+import BookingFormDialog from "@/components/app/BookingFormDialog";
 
 const STAGES = [["new", "Baru"], ["contacted", "Dihubungi"], ["quoted", "Penawaran"], ["negotiation", "Negosiasi"], ["won", "Menang"], ["lost", "Hilang"]];
 const STAGE_TONE = { new: "info", contacted: "info", quoted: "warning", negotiation: "purple", won: "success", lost: "danger" };
@@ -37,6 +38,8 @@ export default function LeadDetailDrawer({ leadId, open, onOpenChange, agents, o
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [quoOpen, setQuoOpen] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
+  const [bookPrefill, setBookPrefill] = useState(null);
 
   const load = () => {
     if (!leadId) return;
@@ -77,6 +80,28 @@ export default function LeadDetailDrawer({ leadId, open, onOpenChange, agents, o
     setBusy(true);
     try { await apiClient.patch(`/leads/${lead.id}`, { value: Number(v) || 0 }); after("Nilai diperbarui"); }
     catch (e) { toast.error("Gagal menyimpan"); } finally { setBusy(false); }
+  };
+  // Lead → Booking: backend memastikan customer (dedupe) & mengembalikan prefill form.
+  const startBooking = async () => {
+    setBusy(true);
+    try {
+      const { data } = await apiClient.post(`/leads/${lead.id}/prepare-booking`);
+      const start = data.trip_date ? `${String(data.trip_date).slice(0, 10)}T08:00` : "";
+      setBookPrefill({
+        initial: { customer_id: data.customer_id, destination: data.destination || "", notes: data.notes || "" },
+        start,
+      });
+      setBookOpen(true);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Gagal menyiapkan booking"); }
+    finally { setBusy(false); }
+  };
+  const onBookingCreated = async (bk) => {
+    try {
+      await apiClient.post(`/leads/${lead.id}/activities`, { type: "note", text: `Booking ${bk?.code || ""} dibuat dari lead ini` });
+      if (lead.stage !== "won") await apiClient.post(`/leads/${lead.id}/stage`, { stage: "won", lost_reason: "" });
+    } catch { /* aktivitas gagal bukan penghalang */ }
+    setBookOpen(false);
+    after(`Lead menjadi booking ${bk?.code || ""}`);
   };
 
   const acts = Array.isArray(lead?.activities) ? lead.activities : [];
@@ -164,11 +189,15 @@ export default function LeadDetailDrawer({ leadId, open, onOpenChange, agents, o
               </div>
             </div>
             {lead.converted_customer_id ? (
-              <div className="flex items-center gap-2 rounded-[12px] border border-[#34C759]/40 bg-[#34C759]/10 px-3 py-2.5 text-[13px] font-semibold text-[#126E2C]" data-testid="lead-converted"><CheckCircle2 size={15} /> Sudah dikonversi ke customer.</div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-[12px] border border-[#34C759]/40 bg-[#34C759]/10 px-3 py-2.5 text-[13px] font-semibold text-[#126E2C]" data-testid="lead-converted"><CheckCircle2 size={15} /> Sudah dikonversi ke customer.</div>
+                <button className="primary-button w-full" disabled={busy} onClick={startBooking} data-testid="lead-to-booking"><CalendarDays size={14} /> Jadikan Booking</button>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <button className="secondary-button w-full" disabled={busy} onClick={() => setQuoOpen(true)} data-testid="lead-make-quotation"><FileText size={14} /> Buat Penawaran</button>
-                <button className="primary-button w-full" disabled={busy} onClick={convert} data-testid="lead-convert"><UserCheck size={14} /> Konversi ke Customer</button>
+                <button className="secondary-button w-full" disabled={busy} onClick={convert} data-testid="lead-convert"><UserCheck size={14} /> Konversi ke Customer</button>
+                <button className="primary-button w-full" disabled={busy} onClick={startBooking} data-testid="lead-to-booking"><CalendarDays size={14} /> Jadikan Booking</button>
               </div>
             )}
             <div>
@@ -202,6 +231,9 @@ export default function LeadDetailDrawer({ leadId, open, onOpenChange, agents, o
     </Dialog>
     <QuotationFormDialog open={quoOpen} onOpenChange={setQuoOpen} lead={lead}
       onSaved={() => { setQuoOpen(false); after("Penawaran dibuat"); }} />
+    <BookingFormDialog open={bookOpen} onOpenChange={setBookOpen}
+      initial={bookPrefill?.initial || null} initialStart={bookPrefill?.start || ""}
+      onCreated={onBookingCreated} />
     </>
   );
 }

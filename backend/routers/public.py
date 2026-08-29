@@ -98,6 +98,17 @@ async def public_fleet_detail(vehicle_id: str):
     return _fleet_public(safe_doc(v), rate=rate, basis=basis)
 
 
+@router.get("/destination-options")
+async def public_destination_options():
+    """INV-REF-02 batch 3: pilihan destinasi utk FORM publik (penawaran) — dari master.
+    Tanpa auth; hanya nama (bukan data sensitif). Nonaktif-ops disembunyikan."""
+    rows = await get_db().destinations.find(
+        {"deleted": {"$ne": True}, "ops_active": {"$ne": False}},
+        {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
+    return [{"value": r.get("name"), "label": r.get("name"), "slug": r.get("slug")}
+            for r in rows if r.get("name")]
+
+
 @router.get("/destinations")
 async def public_destinations(limit: int = Query(default=60, le=100),
                              lang: str = Query(default=i18n.DEFAULT_LANG)):

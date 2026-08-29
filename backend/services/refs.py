@@ -144,7 +144,8 @@ async def destination_or_400(db, value, *, field_label: str = "Destinasi"):
         return ""
     low = raw.lower()
     rows = await db.destinations.find(
-        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).to_list(500)
+        {"deleted": {"$ne": True}, "ops_active": {"$ne": False}},
+        {"_id": 0, "name": 1, "slug": 1}).to_list(500)
     for d in rows:
         if str(d.get("name") or "").strip().lower() == low or str(d.get("slug") or "").strip().lower() == low:
             return str(d.get("name") or raw).strip()
@@ -165,7 +166,7 @@ async def origin_or_400(db, value, *, field_label: str = "Titik jemput"):
         return ""
     low = raw.lower()
     rows = await db.pickup_points.find(
-        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1}).to_list(500)
+        {"deleted": {"$ne": True}, "active": {"$ne": False}}, {"_id": 0, "name": 1}).to_list(500)
     for p in rows:
         if str(p.get("name") or "").strip().lower() == low:
             return str(p.get("name")).strip()

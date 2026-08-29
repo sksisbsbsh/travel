@@ -125,7 +125,8 @@ async def lead_reminders(limit: int = Query(default=2000, le=2000), user=Depends
 async def lead_destination_options(user=Depends(CRM)):
     """INV-REF-02 batch 2: pilihan destinasi utk form lead CRM — dari master `destinations`."""
     rows = await get_db().destinations.find(
-        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
+        {"deleted": {"$ne": True}, "ops_active": {"$ne": False}},
+        {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
     return [{"value": r.get("name"), "label": r.get("name"), "slug": r.get("slug")}
             for r in rows if r.get("name")]
 
@@ -296,3 +297,30 @@ async def convert_lead(lead_id: str, body: LeadConvert, user=Depends(CRM)):
     label = "customer baru" if created else f"customer existing ({cust['name']})"
     await log_activity(db, lead_id, user.get("id"), "converted", text=f"Dikonversi ke {label}: {cust['name']}")
     return {"lead_id": lead_id, "customer": safe_doc(cust), "created": created, "status": "converted"}
+
+
+@router.post("/leads/{lead_id}/prepare-booking")
+async def prepare_booking_from_lead(lead_id: str, user=Depends(CRM)):
+    """Lead → Booking: pastikan customer (dedupe) lalu kembalikan PREFILL utk form booking.
+    Idempotent — memakai customer hasil konversi sebelumnya bila ada."""
+    db = get_db()
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead tidak ditemukan")
+    cust = None
+    cid = lead.get("converted_customer_id") or lead.get("linked_customer_id")
+    if cid:
+        cust = await db.customers.find_one({"id": cid}, {"_id": 0})
+    if not cust:
+        cust, _created = await ensure_customer(
+            db, name=lead.get("customer_name") or "Customer", phone=lead.get("phone") or "",
+            email=lead.get("email") or "", notes=f"Dari lead {lead_id} (konversi booking)")
+        await db.leads.update_one({"id": lead_id}, {"$set": {
+            "converted_customer_id": cust["id"], "linked_customer_id": cust["id"],
+            "last_activity_at": now_iso()}})
+    await log_activity(db, lead_id, user.get("id"), "note",
+                       text=f"Form booking dibuka dari lead (customer: {cust.get('name')})")
+    return {"lead_id": lead_id, "customer_id": cust["id"], "customer_name": cust.get("name"),
+            "destination": lead.get("destination") or "", "trip_date": lead.get("trip_date"),
+            "pax": lead.get("pax") or 1,
+            "notes": f"Dari lead CRM: {lead.get('customer_name')} ({lead.get('pax') or 1} pax)"}

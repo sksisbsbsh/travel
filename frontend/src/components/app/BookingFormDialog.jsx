@@ -25,7 +25,7 @@ const EMPTY = {
   require_dp: false, hold_hours: "",
 };
 
-export default function BookingFormDialog({ open, onOpenChange, onCreated, initialStart = "" }) {
+export default function BookingFormDialog({ open, onOpenChange, onCreated, initialStart = "", initial = null }) {
   const [opts, setOpts] = useState({ customers: [], vehicles: [], drivers: [] });
   const [form, setForm] = useState(EMPTY);
   const [avail, setAvail] = useState(null); // {available, conflicts}
@@ -36,7 +36,7 @@ export default function BookingFormDialog({ open, onOpenChange, onCreated, initi
 
   useEffect(() => {
     if (!open) return;
-    setForm({ ...EMPTY, start: initialStart || "" }); setAvail(null); setQuote(null);
+    setForm({ ...EMPTY, start: initialStart || "", ...(initial || {}) }); setAvail(null); setQuote(null);
     Promise.all([
       apiClient.get("/customers"), apiClient.get("/vehicles"), apiClient.get("/drivers"),
     ]).then(([c, v, d]) => setOpts({
@@ -105,7 +105,7 @@ export default function BookingFormDialog({ open, onOpenChange, onCreated, initi
       });
       toast.success(form.require_dp ? `Booking ${res.data.code} dibuat (HOLD — menunggu DP)` : `Booking ${res.data.code} dibuat`);
       onOpenChange(false);
-      if (onCreated) onCreated();
+      if (onCreated) onCreated(res.data);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Gagal membuat booking");
     } finally {

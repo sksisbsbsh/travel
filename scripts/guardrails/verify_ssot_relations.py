@@ -31,6 +31,8 @@ REFS = BACKEND / "services" / "refs.py"
 BOOKINGS = BACKEND / "routers" / "bookings.py"
 LEADS = BACKEND / "routers" / "leads.py"
 PICKUPS = BACKEND / "routers" / "pickup_points.py"
+QUOTATIONS = BACKEND / "routers" / "quotations.py"
+PUBLIC = BACKEND / "routers" / "public.py"
 
 
 def req(method, path, token=None, body=None, timeout=30):
@@ -99,6 +101,21 @@ def static_checks(g: Guard):
     if "/pickup-points" not in pk or "PickupPointCreate" not in pk:
         g.add("routers/pickup_points.py: master titik jemput (GET/POST /pickup-points) hilang — "
               "FE tak punya sumber pilihan/quick-add satu pintu.")
+    # --- batch 3: penawaran + form publik + halaman kelola master (rename cascade) ---
+    quo = read(QUOTATIONS)
+    g.bump()
+    if quo.count("destination_or_400(") < 2:
+        g.add("routers/quotations.py: `destination_or_400` harus dipanggil di create & update — "
+              "destinasi penawaran ERP kembali teks bebas.")
+    pub = read(PUBLIC)
+    g.bump()
+    if "/destination-options" not in pub:
+        g.add("routers/public.py: endpoint publik `/destination-options` hilang — form penawaran "
+              "web kembali ketik-bebas tanpa pilihan master.")
+    g.bump()
+    if "/master/pickup-points" not in pk or "/master/destinations" not in pk or "update_many" not in pk:
+        g.add("routers/pickup_points.py: halaman kelola master (rename CASCADE via update_many + "
+              "toggle aktif) hilang — rename master tidak lagi menyeret dokumen pemakai → nama bercabang.")
 
 
 def runtime_checks(g: Guard, tok: str):
@@ -161,6 +178,25 @@ def runtime_checks(g: Guard, tok: str):
     if st5 != 200 or not isinstance(pkts, list) or not pkts:
         g.add(f"Runtime: GET /pickup-points gagal (HTTP {st5}) atau kosong — selector titik "
               f"jemput FE tak punya pilihan.")
+    # --- batch 3: destinasi penawaran ngawur → 400; opsi publik tersedia ---
+    st6, data6 = jreq("POST", "/quotations", tok,
+                      {"customer_name": "Penjaga INV-REF-02 Quo", "pax": 1,
+                       "destination": "NgawurLand Penjaga INV-REF-02",
+                       "vehicle_type": "hiace_premio", "days": 1})
+    g.bump()
+    if st6 == 400:
+        detail = str((data6 or {}).get("detail") or "").lower()
+        if "destinasi" not in detail and "master" not in detail:
+            g.add(f"Runtime: destinasi penawaran ngawur ditolak karena alasan LAIN ('{detail[:80]}').")
+    elif 200 <= st6 < 300:
+        g.add("Runtime: POST /quotations MENERIMA destinasi di luar master — dokumen uji dibersihkan.")
+    else:
+        g.add(f"Runtime: respons tak terduga HTTP {st6} untuk destinasi penawaran ngawur (harus 400).")
+    st7, popts = jreq("GET", "/public/destination-options")
+    g.bump()
+    if st7 != 200 or not isinstance(popts, list) or not popts:
+        g.add(f"Runtime: GET /public/destination-options gagal (HTTP {st7}) atau kosong — "
+              f"form penawaran publik tak punya pilihan master.")
 
 
 def main() -> int:

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import DestinationSelect from "@/components/app/DestinationSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatters";
 
@@ -115,7 +116,7 @@ export default function QuotationFormDialog({ open, onOpenChange, onSaved, lead 
             <Fld label="Nama Pelanggan"><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} data-testid="qf-name" /></Fld>
             <Fld label="Telepon"><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="0812…" data-testid="qf-phone" /></Fld>
             <Fld label="Email"><Input value={form.email} onChange={(e) => set("email", e.target.value)} data-testid="qf-email" /></Fld>
-            <Fld label="Destinasi"><Input value={form.destination} onChange={(e) => set("destination", e.target.value)} data-testid="qf-destination" /></Fld>
+            <Fld label="Destinasi (master)"><DestinationSelect value={form.destination} onChange={(v) => set("destination", v)} testId="qf-destination" optionsPath="/leads/destination-options" /></Fld>
             <Fld label="Tanggal Trip"><Input type="date" value={form.trip_date} onChange={(e) => set("trip_date", e.target.value)} data-testid="qf-trip-date" /></Fld>
             <Fld label="Pax"><Input type="number" value={form.pax} onChange={(e) => set("pax", e.target.value)} data-testid="qf-pax" /></Fld>
           </div>

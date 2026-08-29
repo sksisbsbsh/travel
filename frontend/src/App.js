@@ -14,6 +14,7 @@ import DriverWorkspace from "@/features/app/DriverWorkspace";
 import Vehicles from "@/features/app/Vehicles";
 import Drivers from "@/features/app/Drivers";
 import Customers from "@/features/app/Customers";
+import MasterData from "@/features/app/MasterData";
 import Crm from "@/features/app/Crm";
 import Quotations from "@/features/app/Quotations";
 import ContentManager from "@/features/app/ContentManager";
@@ -102,6 +103,7 @@ function App() {
               <Route path="vehicles" element={<RoleGuard section="vehicles"><Vehicles /></RoleGuard>} />
               <Route path="drivers" element={<RoleGuard section="drivers"><Drivers /></RoleGuard>} />
               <Route path="customers" element={<RoleGuard section="customers"><Customers /></RoleGuard>} />
+              <Route path="masterdata" element={<RoleGuard section="masterdata"><MasterData /></RoleGuard>} />
               <Route path="crm" element={<RoleGuard section="crm"><Crm /></RoleGuard>} />
               <Route path="quotations" element={<RoleGuard section="quotations"><Quotations /></RoleGuard>} />
               <Route path="cms" element={<RoleGuard section="cms"><ContentManager /></RoleGuard>} />

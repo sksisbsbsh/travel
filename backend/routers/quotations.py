@@ -20,6 +20,7 @@ from services.availability import find_conflicts, find_maintenance_conflicts, fi
 from services.audit import record
 from services.counters import next_booking_code
 from services.crm import STAGE_LABEL, log_activity
+from services.refs import destination_or_400
 from services.events import emit
 from services.exporter import quotation_pdf
 from services.geo import parse_iso
@@ -82,7 +83,11 @@ async def create_quotation(body: QuotationDraftCreate, user=Depends(QUOT)):
         raise HTTPException(status_code=400, detail="Nama pelanggan wajib diisi")
     phone = body.phone or (lead or {}).get("phone") or (customer or {}).get("phone") or ""
     email = body.email or (lead or {}).get("email") or (customer or {}).get("email") or ""
-    destination = body.destination or (lead or {}).get("destination") or ""
+    # INV-REF-02 batch 3: destinasi dari input divalidasi master; warisan dari lead dibiarkan.
+    if body.destination:
+        destination = await destination_or_400(db, body.destination, field_label="Destinasi penawaran")
+    else:
+        destination = (lead or {}).get("destination") or ""
     trip_date = body.trip_date or (lead or {}).get("trip_date")
     pax = int(body.pax or (lead or {}).get("pax") or 1)
 
@@ -151,6 +156,10 @@ async def update_quotation(quotation_id: str, body: QuotationDraftUpdate, user=D
         v = getattr(body, f)
         if v is not None:
             updates[f] = v
+    # INV-REF-02: destinasi hanya divalidasi bila DIUBAH (penawaran lama tetap bisa diedit).
+    if "destination" in updates and updates["destination"] != quo.get("destination"):
+        updates["destination"] = await destination_or_400(db, updates["destination"],
+                                                          field_label="Destinasi penawaran")
     if "phone" in updates:
         updates["phone_normalized"] = normalize_phone(updates["phone"])
     if "pax" in updates:

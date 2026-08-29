@@ -45,6 +45,7 @@ export const PAGE_META = {
   vehicles: { title: "Armada", kicker: "Master Data" },
   drivers: { title: "Driver", kicker: "Master Data" },
   customers: { title: "Customer 360", kicker: "Master Data" },
+  masterdata: { title: "Referensi (Jemput & Destinasi)", kicker: "Master Data" },
   crm: { title: "CRM · Pipeline Lead", kicker: "CRM & Keuangan" },
   quotations: { title: "Penawaran · Quotation", kicker: "CRM & Keuangan" },
   inbox: { title: "Inbox · Percakapan", kicker: "CRM & Keuangan" },
@@ -83,6 +84,7 @@ export const NAV_TREE = [
       { id: "vehicles", label: "Armada", icon: Bus, path: "/app/vehicles" },
       { id: "drivers", label: "Driver", icon: IdCard, path: "/app/drivers" },
       { id: "customers", label: "Customer 360", icon: Contact, path: "/app/customers" },
+      { id: "masterdata", label: "Referensi (Jemput & Destinasi)", icon: Database, path: "/app/masterdata" },
     ],
   },
   {
@@ -123,8 +125,8 @@ export const NAV_TREE = [
 ];
 
 export const ROLE_MENU_ALLOWLIST = {
-  owner: ["dashboard", "bookings", "calendar", "dispatch", "driver-workspace", "gps", "maintenance", "partners", "vehicles", "drivers", "customers", "crm", "quotations", "inbox", "automation", "finance", "reports", "ads", "landing", "tracking", "integrations", "cms", "media", "users", "settings", "auditlog"],
-  ops_admin: ["dashboard", "bookings", "calendar", "dispatch", "driver-workspace", "gps", "maintenance", "partners", "vehicles", "drivers", "customers", "crm", "quotations", "inbox", "automation", "finance", "reports", "ads", "cms", "media"],
+  owner: ["dashboard", "bookings", "calendar", "dispatch", "driver-workspace", "gps", "maintenance", "partners", "vehicles", "drivers", "customers", "masterdata", "crm", "quotations", "inbox", "automation", "finance", "reports", "ads", "landing", "tracking", "integrations", "cms", "media", "users", "settings", "auditlog"],
+  ops_admin: ["dashboard", "bookings", "calendar", "dispatch", "driver-workspace", "gps", "maintenance", "partners", "vehicles", "drivers", "customers", "masterdata", "crm", "quotations", "inbox", "automation", "finance", "reports", "ads", "cms", "media"],
   // FASE F (E29): peran BARU 'marketing_admin' — pemilik kanal akuisisi. Boleh mengelola
   // kredensial API iklan, landing page, kampanye, dan lead iklan; TIDAK boleh menyentuh
   // keuangan, pengaturan sistem, manajemen user, maupun operasional armada.

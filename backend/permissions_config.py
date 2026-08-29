@@ -55,6 +55,8 @@ SECTION_ACCESS = {
     "dispatch": {"owner", "ops_admin"},
     "analytics": {"owner", "ops_admin"},
     "partners": {"owner", "ops_admin"},
+    # Master Data referensi (titik jemput + destinasi ops) — halaman /app/masterdata.
+    "masterdata": {"owner", "ops_admin"},
 }
 
 

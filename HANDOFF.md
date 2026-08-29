@@ -1,7 +1,69 @@
 # 🤝 HANDOFF — Rahaza Travel ERP
 
 > **Bahasa kerja: Indonesia.** Agent berikutnya WAJIB merespons user dalam Bahasa Indonesia.
-> **Diperbarui:** 2026-08-29 sesi 2 (**SSOT BATCH 2 + ALARM HARGA**, BUG-0137: `bookings.origin` =
+>
+> ## ⚠️ STATUS SESI TERAKHIR (2026-08-29, sesi 3 — **BELUM TUNTAS, BACA INI DULU**)
+> Pekerjaan sesi 3 (**SSOT Batch 3 + halaman Master Data + Lead→Booking**, dicatat sebagai
+> BUG-0138 di `memory/BUG_REGISTRY.md`) **kode sudah selesai ditulis & lolos verifikasi manual/curl,
+> tetapi DIHENTIKAN USER sebelum ritual penutup**. Yang SUDAH:
+> - **Batch 3 SSOT**: destinasi PENAWARAN divalidasi master — `routers/quotations.py` create/update
+>   via `destination_or_400` (update hanya-bila-diubah); form penawaran WEB PUBLIK
+>   (`features/public/Quotation.jsx`) kini `<select>` dari endpoint publik baru
+>   `GET /api/public/destination-options` (backend publik tetap LUNAK via `destination_normalize`);
+>   `QuotationFormDialog.jsx` pakai `DestinationSelect` (optionsPath `/leads/destination-options`).
+> - **Halaman Master Data** `/app/masterdata` (`features/app/MasterData.jsx`, section BARU
+>   `masterdata` = owner+ops_admin; sudah didaftarkan 3 lapis: `navigationConfig.js`
+>   (NAV_TREE + PAGE_META + allowlist), `App.js` RoleGuard, `permissions_config.SECTION_ACCESS`,
+>   dan `docs/05_NAVIGATION_MAP.md` §2+§3). Endpoint kelola di `routers/pickup_points.py`:
+>   `GET/PATCH /api/master/pickup-points[/{id}]` & `GET/PATCH /api/master/destinations[/{id}]` —
+>   **RENAME = CASCADE** ke bookings/leads/quotations (terverifikasi: rename Bandung→"Bandung Kota"
+>   men-cascade 8 booking, lalu dikembalikan); **NONAKTIF** (`active`/`ops_active`) menyembunyikan
+>   dari SEMUA selector + ditolak pemakaian baru (filter di `services/refs.py` + endpoint options).
+> - **Lead→Booking**: `POST /api/leads/{id}/prepare-booking` (ensure_customer dedupe + prefill,
+>   idempotent) + tombol **"Jadikan Booking"** (`data-testid="lead-to-booking"`) di
+>   `LeadDetailDrawer.jsx` → membuka `BookingFormDialog` (prop baru `initial` utk prefill) →
+>   setelah booking dibuat: aktivitas lead tercatat + stage otomatis `won`.
+> - Guardrail **INV-REF-02 diperluas** (+5 cek batch 3: quotations, public options, master cascade)
+>   → `verify_ssot_relations.py` **PASS 17 cek**; `verify_rbac_guards.py` PASS 193;
+>   `verify_no_test_pollution.py` PASS; `check_nav_map.py` OK; screenshot halaman Master Data OK
+>   (badge "ops/draft" sudah dibetulkan: hanya utk `status === "draft"`).
+>
+> ### ❗ YANG BELUM (wajib dikerjakan agent berikutnya SEBELUM klaim selesai)
+> 1. **`bash scripts/gate.sh` penuh BELUM dijalankan** setelah perubahan sesi 3 (terakhir HIJAU
+>    46/46 sebelum batch 3). Jalankan di background (~4 menit; otomatis RESEED DB) dan pastikan
+>    HIJAU penuh 0 FAIL 0 SKIP.
+> 2. **testing_agent BELUM dipanggil** untuk batch 3. Uji minimal: (a) POST /quotations destinasi
+>    ngawur → 400 & destinasi 'bali' → 'Bali'; (b) form publik /quotation memakai select
+>    `q-destination` berisi opsi master & submit tetap DITERIMA utk nilai warisan; (c) halaman
+>    /app/masterdata: rename cascade + toggle nonaktif menghilangkan opsi dari `bf-destination`/
+>    `bf-origin`; RBAC: marketing_admin & driver DITOLAK dari /app/masterdata; (d) alur penuh
+>    Lead→Booking dari drawer CRM (prefill customer/destinasi, lead jadi `won`, aktivitas tercatat);
+>    (e) regresi: buat booking biasa, buat penawaran dari lead (qf-destination selector).
+> 3. **`memory/INVARIANTS.md` BELUM diperbarui** utk scope batch 3 (baris INV-REF-02: tambahkan
+>    quotations + public options + master cascade/nonaktif; jangan lupa INV-META-01 menuntut
+>    registri sinkron dgn guard).
+> 4. **`memory/PRD.md` BELUM diperbarui** utk sesi 3 (tulis saat finish).
+> 5. Temuan kecil tak-blocking dari `check_nav_map.py`: INFO menu 'users' & 'vehicles' belum punya
+>    PAGE_META — sudah begitu sejak sebelum sesi ini, BUKAN regresi; abaikan atau rapikan terpisah.
+>
+> ### Konteks teknis penting sesi 3 (agar tidak mengulang jalan buntu)
+> - Prefix router publik = `/api/public` → endpoint options publik didefinisikan sebagai
+>   `@router.get("/destination-options")` di `routers/public.py` (JANGAN tulis `/public/...` ganda).
+> - Endpoint literal `/bookings/destination-options` HARUS tetap terdefinisi SEBELUM
+>   `/bookings/{booking_id}` di `routers/bookings.py` (urutan route FastAPI).
+> - `routers/bookings.py` dibatasi validate_compliance **maks 800 baris** (sekarang ~796) — kalau
+>   perlu menambah, pindahkan logika ke `services/` (contoh: `release_booking_resources` sudah
+>   dipindah ke `services/trips.py`).
+> - Probe runtime guard memakai marker `Penjaga INV-REF-02` + `purge_guard_bookings()`/
+>   `purge_guard_artifacts` (koleksi quotations/leads sudah tercakup purge).
+> - Master destinasi: baris operasional dibuat `status:"draft"` agar TIDAK tayang di web publik
+>   (public pakai visibility_filter published); toggle ops memakai field `ops_active`
+>   (default aktif bila field tidak ada — filter `{"ops_active": {"$ne": False}}`).
+> - Kredensial demo: `memory/test_credentials.md` (semua `demo12345`; login `/app/login`).
+> - DB di-reseed oleh gate: booking/lead uji yang kamu buat akan hilang — jangan panik.
+>
+> ## Riwayat sesi 2026-08-29 (sudah TUNTAS + gate HIJAU + testing_agent)
+> **Sesi 2 (SSOT BATCH 2 + ALARM HARGA**, BUG-0137: `bookings.origin` =
 > relasi master baru `pickup_points` (pkp_, `refs.origin_or_400`, quick-add satu pintu
 > `POST /api/pickup-points`, selector FE `PickupPointSelect` dgn dedupe); `leads.destination`
 > jalur ERP divalidasi `destination_or_400` (+`GET /leads/destination-options`), jalur PUBLIK

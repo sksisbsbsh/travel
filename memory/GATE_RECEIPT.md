@@ -2,7 +2,7 @@
 
 > Bukti verifikasi otomatis. Dihasilkan `scripts/gate.sh`. JANGAN edit manual.
 
-- **Waktu:** 2026-08-29 17:41:04
+- **Waktu:** 2026-08-29 17:59:59
 - **Backend:** RUNNING + auth siap (gate runtime dijalankan)
 
 | Gate | Hasil |
@@ -11,8 +11,8 @@
 | verify_schema (field + FK + id-prefix) | PASS |
 | verify_architecture (performa/tech-debt) | PASS |
 | verify_delivery (anti under-deliver) | PASS |
-| ux_audit --strict (baseline UX) | PASS |
-| validate_compliance (file/naming/docs/api/env) | PASS |
+| ux_audit --strict (baseline UX) | FAIL |
+| validate_compliance (file/naming/docs/api/env) | FAIL |
 | check_nav_map (navigasi vs SSOT) | PASS |
 | guard:numeric_bounds (INV-NUM-01) | PASS |
 | guard:reservation_locks (INV-RACE-01) | PASS |
@@ -41,7 +41,7 @@
 | guard:adversarial_5xx (INV-5XX-01) | PASS |
 | guard:identity_race (INV-IDENT-01) | PASS |
 | guard:settings_bounds (INV-SET-01) | PASS |
-| guard:rbac_runtime (INV-RBAC-06) | PASS |
+| guard:rbac_runtime (INV-RBAC-06) | FAIL |
 | guard:media_runtime (INV-MEDIA-04) | PASS |
 | guard:pricing_integrity (INV-PRICE-01) | PASS |
 | guard:booking_public (INV-BOOK-02) | PASS |
@@ -54,6 +54,6 @@
 | guard:no_test_pollution (INV-CLEAN-01) | PASS |
 | selftest:no_test_pollution (INV-CLEAN-01 — uji mutasi) | PASS |
 
-## ✅ VERDICT: HIJAU — boleh lanjut / klaim selesai (untuk cakupan yang TIDAK di-skip).
+## ❌ VERDICT: MERAH — ADA GATE GAGAL. DILARANG klaim selesai. Perbaiki lalu jalankan ulang.
 
 _Catatan: SKIP bukan PASS. Gate runtime harus dijalankan ulang saat backend sudah hidup._
