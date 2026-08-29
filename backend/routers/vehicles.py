@@ -85,9 +85,10 @@ async def create_vehicle(body: VehicleCreate, user=Depends(MANAGER)):
         "photos": body.photos or [], "gallery": body.gallery or [],
         "tour_scenes": body.tour_scenes or [], "specs": body.specs or [],
         "highlights": body.highlights or [], "year": body.year, "color": body.color,
-        "price_from": body.price_from,
-        # Tarif resmi per unit + tayang-web: dipakai mesin harga & katalog publik.
-        "day_rate": int(round(float(body.day_rate or 0))),
+        # RC-B (INV-PRICE-02): tarif per unit TIDAK ditulis dari form armada.
+        # Unit baru lahir tanpa override (0 = pakai tarif tipe); ubah via Master Harga.
+        "price_from": None,
+        "day_rate": 0,
         "publish_to_web": bool(body.publish_to_web is not False),
         "ownership": vown,
         "partner_id": body.partner_id or None,
@@ -170,8 +171,6 @@ async def update_vehicle(vehicle_id: str, body: VehicleUpdate, user=Depends(MANA
         updates["capacity"] = int(updates["capacity"])
     if "odometer" in updates:
         updates["odometer"] = float(updates["odometer"])
-    if "day_rate" in updates:
-        updates["day_rate"] = int(round(float(updates["day_rate"])))
     # `publish_to_web` = False adalah nilai SAH (sembunyikan dari web); filter `is not None`
     # di atas sudah membuangnya, jadi ambil ulang dari body agar toggle "matikan" berfungsi.
     if body.publish_to_web is not None:

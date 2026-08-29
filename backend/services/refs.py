@@ -131,3 +131,25 @@ def vehicle_rates_or_400(raw, *, field_label="Tarif per tipe armada") -> dict:
         if amount:
             out[vt] = amount
     return out
+
+
+async def destination_or_400(db, value, *, field_label: str = "Destinasi"):
+    """INV-REF-02: destinasi booking ERP WAJIB dari master `destinations` (bukan teks bebas).
+
+    Nilai kosong = SAH (belum ditautkan). Pencocokan case-insensitive terhadap `name`/`slug`,
+    dan nilai yang tersimpan SELALU nama kanonik master — bukan ejaan bebas pengguna.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    low = raw.lower()
+    rows = await db.destinations.find(
+        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).to_list(500)
+    for d in rows:
+        if str(d.get("name") or "").strip().lower() == low or str(d.get("slug") or "").strip().lower() == low:
+            return str(d.get("name") or raw).strip()
+    names = sorted({str(d.get("name") or "").strip() for d in rows if d.get("name")})
+    contoh = ", ".join(names[:8]) or "-"
+    raise _bad(f"{field_label} '{raw[:40]}' tidak ada di master destinasi. "
+               f"Pilih dari master (mis. {contoh}) atau tambahkan dulu di master destinasi.")
+

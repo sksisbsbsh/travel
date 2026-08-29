@@ -1,16 +1,29 @@
-"""routers/pricing.py — Pricing Engine endpoint internal (Phase 9 / B1).
+"""routers/pricing.py — Pricing Engine endpoint internal (Phase 9 / B1) + MASTER HARGA (RC-B).
 
 Dipakai Booking wizard untuk auto-hitung harga (rincian transparan) sebelum simpan.
-Sumber tarif = settings.pricing_rules (services.pricing). Akses: semua user login.
-"""
-from fastapi import APIRouter, Depends
+Sumber tarif = settings.pricing_rules + vehicles.day_rate (services.pricing.resolve_day_rate).
 
+RC-A (BUG-0132): dulu /pricing/quote hanya me-resolve TIPE armada dan mengabaikan
+`vehicles.day_rate` (tarif per unit), padahal mesin yang menagih (create_booking/approve,
+web publik) memakai `resolve_day_rate` — angka yang DILIHAT ops saat "Hitung Otomatis"
+bisa berbeda dari yang DITAGIH. Sekarang quote memakai resolusi tarif yang SAMA.
+
+RC-B (BUG-0133): endpoint `unit-rates` = SATU-SATUNYA jalur tulis tarif per unit
+(`vehicles.day_rate`). Form Armada tidak lagi menulis harga (read-only reference).
+Dijaga guardrail INV-PRICE-02 (scripts/guardrails/verify_price_master.py).
+"""
+from fastapi import APIRouter, Depends, HTTPException
+
+from core_utils import safe_doc
 from db import get_db
-from dependencies import get_current_user
-from schemas import PricingQuoteRequest
-from services.pricing import compute_quote, get_pricing_rules
+from dependencies import get_current_user, require_section
+from schemas import PricingQuoteRequest, UnitDayRateUpdate
+from services.audit import record
+from services.pricing import compute_quote, get_pricing_rules, resolve_day_rate, type_label
 
 router = APIRouter(prefix="/api", tags=["pricing"])
+# Master Harga dikelola dari halaman Pengaturan (owner) — section yang sama.
+SETTINGS = require_section("settings")
 
 
 async def _holidays(db):
@@ -26,15 +39,52 @@ async def get_rules(user=Depends(get_current_user)):
     return await get_pricing_rules(get_db())
 
 
+@router.get("/pricing/unit-rates")
+async def list_unit_rates(user=Depends(SETTINGS)):
+    """Master Harga: tarif efektif tiap unit + dasarnya (tarif unit/tipe/default)."""
+    db = get_db()
+    rules = await get_pricing_rules(db)
+    rows = await db.vehicles.find(
+        {}, {"_id": 0, "id": 1, "code": 1, "name": 1, "plate_number": 1,
+             "type": 1, "day_rate": 1}).sort("code", 1).to_list(500)
+    out = []
+    for v in rows:
+        rate, basis = resolve_day_rate(rules, vehicle=v)
+        out.append({**v, "type_label": type_label(v.get("type")),
+                    "effective_rate": rate, "rate_basis": basis})
+    return safe_doc(out)
+
+
+@router.patch("/pricing/unit-rates/{vehicle_id}")
+async def set_unit_rate(vehicle_id: str, body: UnitDayRateUpdate, user=Depends(SETTINGS)):
+    """SATU-SATUNYA jalur tulis tarif per unit. day_rate=0 → hapus override (pakai tarif tipe)."""
+    db = get_db()
+    vehicle = await db.vehicles.find_one({"id": vehicle_id}, {"_id": 0})
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Armada tidak ditemukan")
+    new_rate = int(round(float(body.day_rate or 0)))
+    await db.vehicles.update_one({"id": vehicle_id}, {"$set": {"day_rate": new_rate}})
+    await record(db, actor=user, action="update", entity_type="vehicle", entity_id=vehicle_id,
+                 summary=f"Master Harga: tarif unit {vehicle.get('name')} → Rp {new_rate:,}".replace(",", "."))
+    rules = await get_pricing_rules(db)
+    vehicle["day_rate"] = new_rate
+    rate, basis = resolve_day_rate(rules, vehicle=vehicle)
+    return {"id": vehicle_id, "day_rate": new_rate, "effective_rate": rate, "rate_basis": basis}
+
+
 @router.post("/pricing/quote")
 async def quote(body: PricingQuoteRequest, user=Depends(get_current_user)):
-    """Hitung rincian harga ber-item + DP saran. Resolusi tipe armada via vehicle_id bila perlu."""
+    """Hitung rincian harga ber-item + DP saran — tarif di-resolve SAMA dengan mesin penagih."""
     db = get_db()
     rules = await get_pricing_rules(db)
     vtype = body.vehicle_type
-    if body.vehicle_id and not vtype:
-        v = await db.vehicles.find_one({"id": body.vehicle_id}, {"_id": 0, "type": 1})
-        vtype = v.get("type") if v else None
+    day_rate = None
+    if body.vehicle_id:
+        v = await db.vehicles.find_one({"id": body.vehicle_id}, {"_id": 0, "type": 1, "day_rate": 1})
+        if v:
+            vtype = vtype or v.get("type")
+            # RC-A: tarif unit menimpa tarif tipe — identik dengan create/approve booking & web.
+            day_rate, _basis = resolve_day_rate(rules, vehicle=v, vehicle_type=vtype)
     return compute_quote(
         rules,
         vehicle_type=vtype,
@@ -43,4 +93,5 @@ async def quote(body: PricingQuoteRequest, user=Depends(get_current_user)):
         when=body.start_date,
         holidays=await _holidays(db),
         include_travel=True,
+        day_rate=day_rate,
     )

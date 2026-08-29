@@ -311,23 +311,56 @@ def guess_content_type(filename: str) -> str:
     return EXT_TYPES.get(ext, "application/octet-stream")
 
 
+def check_file(storage_path: str, backend: str = ""):
+    """Status berkas fisik → (state, reason). state: 'ok' | 'missing' | 'unknown'.
+
+    RC-C (BUG-0134): dulu `exists()` mengembalikan bool sehingga SEMUA kegagalan pengecekan
+    (kunci objstore tidak diset, gangguan jaringan, path mismatch/tidak sah) dihitung sebagai
+    "berkas hilang" → notif MERAH PALSU padahal berkas ada. Sekarang hanya bukti nyata yang
+    boleh merah: lokal = file benar-benar tidak ada; objstore = HTTP 404 dari penyimpanan.
+    Kasus ambigu (cek gagal) = 'unknown' + alasan → warning kuning, bukan alarm merah.
+    """
+    which = (backend or "").strip().lower() or backend_name()
+    path = str(storage_path or "").strip()
+    if not path:
+        return "unknown", "Jalur berkas kosong di dokumen aset (path mismatch/data lama)."
+    if which == "objstore":
+        if not _emergent_key():
+            return "unknown", "EMERGENT_LLM_KEY tidak diset — keberadaan berkas objstore tidak bisa dicek."
+        try:
+            key = init_storage()
+            r = requests.get(f"{STORAGE_URL}/objects/{path}",
+                             headers={"X-Storage-Key": key}, timeout=20)
+            if r.status_code in (401, 403):
+                key = init_storage(force=True)
+                r = requests.get(f"{STORAGE_URL}/objects/{path}",
+                                 headers={"X-Storage-Key": key}, timeout=20)
+            if r.status_code == 404:
+                return "missing", "Object storage menjawab 404 — berkas terbukti tidak ada."
+            if r.status_code < 400:
+                return "ok", ""
+            return "unknown", f"Object storage menjawab HTTP {r.status_code} — bukan bukti hilang."
+        except MediaError as exc:
+            return "unknown", f"Pengecekan objstore gagal: {exc}"
+        except requests.RequestException as exc:
+            return "unknown", f"Gangguan jaringan saat cek objstore: {exc.__class__.__name__}"
+    try:
+        target = _local_abs(path)
+    except MediaError:
+        return "unknown", "Jalur berkas tidak sah/di luar direktori media (path mismatch)."
+    return ("ok", "") if target.is_file() else ("missing", "Berkas tidak ada di disk lokal server.")
+
+
 def exists(storage_path: str, backend: str = "") -> bool:
     """Apakah berkas fisiknya benar-benar ada? Dipakai 'Pemulih Media' & panel kesehatan aset.
 
     Dibutuhkan karena dokumen `media_assets` bisa hidup tanpa berkasnya (pod baru dari repo bersih:
     berkas biner di-gitignore) — tanpa pemeriksaan ini gambar 404 tanpa satu pun error backend.
+    Catatan RC-C: untuk PANEL kesehatan pakai `check_file` (tri-state) — bool ini hanya utk
+    pemakai lama yang butuh jawaban kasar ('unknown' dianggap ada, agar tidak ada alarm palsu).
     """
-    which = (backend or "").strip().lower() or backend_name()
-    if which == "objstore":
-        try:
-            _get_objstore(storage_path)
-            return True
-        except Exception:  # noqa: BLE001
-            return False
-    try:
-        return _local_abs(storage_path).is_file()
-    except MediaError:
-        return False
+    state, _reason = check_file(storage_path, backend=backend)
+    return state != "missing"
 
 
 def remove(storage_path: str, backend: str = "") -> bool:

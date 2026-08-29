@@ -56,6 +56,7 @@ WRITERS = {
     "verify_identity_race.py": "POST /customers paralel untuk menguji index unik",
     "verify_media_runtime.py": "mengunggah aset `guard-media-*` ke Media Library",
     "verify_adversarial_5xx.py": "mengirim payload adversarial ke endpoint tulis",
+    "verify_ssot_relations.py": "menembak destinasi di luar master ke POST /bookings (INV-REF-02)",
 }
 CLEANUP_CALLS = ("purge_guard_artifacts", "purge_guard_bookings")
 

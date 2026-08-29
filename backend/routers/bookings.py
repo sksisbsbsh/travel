@@ -22,6 +22,7 @@ from services.counters import next_booking_code
 from services.events import emit
 from services.geo import parse_iso
 from services.pricing import compute_quote, get_dp_percent, get_pricing_rules, span_days
+from services.refs import destination_or_400
 
 router = APIRouter(prefix="/api", tags=["bookings"])
 # RBAC: mutasi booking hanya untuk manajemen (owner/ops_admin). Driver read-only.
@@ -164,6 +165,8 @@ async def create_booking(body: BookingCreate, user=Depends(MANAGER)):
             raise HTTPException(status_code=400, detail="Driver tidak ditemukan")
     if not body.start_datetime or not body.end_datetime:
         raise HTTPException(status_code=400, detail="Tanggal mulai & selesai wajib diisi")
+    # INV-REF-02 (RC-E): destinasi WAJIB dari master `destinations` — bukan teks bebas.
+    destination = await destination_or_400(db, body.destination)
     start_dt = parse_iso(body.start_datetime)
     end_dt = parse_iso(body.end_datetime)
     if not start_dt or not end_dt:
@@ -220,7 +223,7 @@ async def create_booking(body: BookingCreate, user=Depends(MANAGER)):
     doc = {
         "id": new_id("bk"), "code": await _next_code(db),
         "customer_id": body.customer_id, "vehicle_id": body.vehicle_id, "driver_id": body.driver_id,
-        "origin": body.origin or "", "destination": body.destination or "",
+        "origin": body.origin or "", "destination": destination,
         "start_datetime": start_iso, "end_datetime": end_iso,
         "base_price": base, "add_ons": add_ons, "total_amount": total, "paid_amount": 0,
         "payment_status": "belum_bayar", "status": status,
@@ -275,6 +278,8 @@ async def create_group_booking(body: GroupBookingCreate, user=Depends(MANAGER)):
         if e_dt <= s_dt:
             raise HTTPException(status_code=400, detail=f"Unit #{idx + 1}: tanggal selesai harus setelah mulai")
         s_iso, e_iso = s_dt.isoformat(), e_dt.isoformat()
+        u_destination = await destination_or_400(db, u.destination,
+                                                 field_label=f"Unit #{idx + 1}: destinasi")
         conflicts = await find_conflicts(db, u.vehicle_id, s_iso, e_iso)
         if conflicts:
             codes = ", ".join(c.get("code", c.get("id")) for c in conflicts)
@@ -300,7 +305,8 @@ async def create_group_booking(body: GroupBookingCreate, user=Depends(MANAGER)):
             base = money(quote["total"])
         total = money(base + sum(float(a.get("amount", 0) or 0) for a in add_ons))
         prepared.append({"u": u, "vehicle": vehicle, "driver": driver, "s_iso": s_iso, "e_iso": e_iso,
-                         "s_dt": s_dt, "e_dt": e_dt, "add_ons": add_ons, "base": base, "total": total})
+                         "s_dt": s_dt, "e_dt": e_dt, "add_ons": add_ons, "base": base, "total": total,
+                         "destination": u_destination})
     # Anti-bentrok ANTAR-unit dalam grup (armada sama + waktu overlap) — belum ter-insert ke DB.
     for i in range(len(prepared)):
         for j in range(i + 1, len(prepared)):
@@ -336,7 +342,7 @@ async def create_group_booking(body: GroupBookingCreate, user=Depends(MANAGER)):
             doc = {
                 "id": new_id("bk"), "code": await _next_code(db),
                 "customer_id": body.customer_id, "vehicle_id": p["u"].vehicle_id, "driver_id": p["u"].driver_id,
-                "origin": p["u"].origin or "", "destination": p["u"].destination or "",
+                "origin": p["u"].origin or "", "destination": p["destination"],
                 "start_datetime": p["s_iso"], "end_datetime": p["e_iso"],
                 "base_price": p["base"], "add_ons": p["add_ons"], "total_amount": p["total"], "paid_amount": 0,
                 "payment_status": "belum_bayar", "status": status,
@@ -365,6 +371,15 @@ async def create_group_booking(body: GroupBookingCreate, user=Depends(MANAGER)):
             "require_dp": bool(body.require_dp), "bookings": created}
 
 
+@router.get("/bookings/destination-options")
+async def booking_destination_options(user=Depends(BOOKINGS)):
+    """INV-REF-02: pilihan destinasi utk form booking ERP — dari master `destinations`."""
+    rows = await get_db().destinations.find(
+        {"deleted": {"$ne": True}}, {"_id": 0, "name": 1, "slug": 1}).sort("name", 1).to_list(500)
+    return [{"value": r.get("name"), "label": r.get("name"), "slug": r.get("slug")}
+            for r in rows if r.get("name")]
+
+
 @router.get("/bookings/{booking_id}")
 async def get_booking(booking_id: str, user=Depends(BOOKINGS)):
     db = get_db()
@@ -387,10 +402,14 @@ async def update_booking(booking_id: str, body: BookingUpdate, user=Depends(MANA
     if not booking:
         raise HTTPException(status_code=404, detail="Booking tidak ditemukan")
     updates = {}
-    for f in ("origin", "destination", "notes"):
+    for f in ("origin", "notes"):
         v = getattr(body, f)
         if v is not None:
             updates[f] = v
+    # INV-REF-02 (RC-E): destinasi hanya divalidasi bila DIUBAH — booking lama dengan nilai
+    # warisan (pra-master) tetap bisa diedit field lain tanpa dipaksa ganti destinasi.
+    if body.destination is not None and body.destination != booking.get("destination"):
+        updates["destination"] = await destination_or_400(db, body.destination)
     if body.driver_id is not None:
         if body.driver_id:
             driver = await db.drivers.find_one({"id": body.driver_id}, {"_id": 0})
@@ -472,31 +491,9 @@ async def confirm_booking(booking_id: str, user=Depends(MANAGER)):
 
 
 async def _release_booking_resources(db, booking):
-    """RC-04: saat booking di-cancel — batalkan trip terkait yang belum jalan &
-    bebaskan armada/driver bila tak ada tugas aktif lain. Idempotent & defensif."""
-    bkid = booking["id"]
-    ACTIVE = ["standby", "to_pickup", "on_trip"]
-    # Batalkan trip terkait yang belum completed/cancelled.
-    await db.trips.update_many(
-        {"booking_id": bkid, "status": {"$nin": ["completed", "cancelled"]}},
-        {"$set": {"status": "cancelled"}})
-    # Bebaskan armada bila terkunci oleh booking ini & tak ada trip aktif lain.
-    vid = booking.get("vehicle_id")
-    if vid:
-        other_active = await db.trips.find_one(
-            {"vehicle_id": vid, "booking_id": {"$ne": bkid}, "status": {"$in": ACTIVE}},
-            {"_id": 0, "id": 1})
-        veh = await db.vehicles.find_one({"id": vid}, {"_id": 0, "status": 1})
-        if not other_active and veh and veh.get("status") == "on_trip":
-            await db.vehicles.update_one({"id": vid}, {"$set": {"status": "available"}})
-    # Driver offline bila tak ada tugas aktif lain.
-    did = booking.get("driver_id")
-    if did:
-        other_drv = await db.trips.find_one(
-            {"driver_id": did, "booking_id": {"$ne": bkid}, "status": {"$in": ACTIVE}},
-            {"_id": 0, "id": 1})
-        if not other_drv:
-            await db.drivers.update_one({"id": did}, {"$set": {"status": "offline"}})
+    """RC-04 — delegasi ke SSOT services.trips.release_booking_resources (pindah demi batas ukuran file)."""
+    from services.trips import release_booking_resources
+    await release_booking_resources(db, booking)
 
 
 @router.post("/bookings/{booking_id}/cancel")

@@ -167,10 +167,8 @@ class VehicleCreate(BaseModel):
     highlights: Optional[List[str]] = None
     year: Optional[int] = None
     color: Optional[str] = None
-    price_from: Optional[float] = Field(default=None, ge=0)
-    # Tarif resmi PER UNIT (integer rupiah). Bila > 0, MENIMPA tarif per tipe di
-    # pricing_rules.day_rates dan dipakai mesin harga di web maupun ERP (SSOT harga).
-    day_rate: Optional[float] = Field(default=None, ge=0)
+    # RC-B (INV-PRICE-02): `price_from`/`day_rate` DIHAPUS dari jalur tulis armada —
+    # tarif per unit HANYA lewat Master Harga (PATCH /api/pricing/unit-rates/{id}).
     publish_to_web: Optional[bool] = True    # tayang & bisa dipesan di situs publik
     ownership: Optional[str] = "owned"       # E16: owned | partner
     partner_id: Optional[str] = None         # E16: tautan mitra bila ownership=partner
@@ -199,8 +197,7 @@ class VehicleUpdate(BaseModel):
     highlights: Optional[List[str]] = None
     year: Optional[int] = None
     color: Optional[str] = None
-    price_from: Optional[float] = Field(default=None, ge=0)
-    day_rate: Optional[float] = Field(default=None, ge=0)   # tarif resmi per unit (menimpa tarif tipe)
+    # RC-B (INV-PRICE-02): tarif unit tidak bisa ditulis dari sini — pakai Master Harga.
     publish_to_web: Optional[bool] = None                    # tayang di situs publik
     ownership: Optional[str] = None          # E16: owned | partner
     partner_id: Optional[str] = None         # E16: tautan mitra
@@ -304,6 +301,11 @@ class PublicBookingCreate(BaseModel):
 
 
 # === Phase 9 / Tahap B · B1: Pricing Engine ===
+class UnitDayRateUpdate(BaseModel):
+    """Master Harga (RC-B): tulis tarif per unit. 0 = hapus override (pakai tarif tipe)."""
+    day_rate: float = Field(default=0, ge=0, le=100_000_000)  # batas atas anti salah ketik
+
+
 class PricingQuoteRequest(BaseModel):
     """Permintaan hitung harga internal (Booking wizard)."""
     vehicle_type: Optional[str] = None

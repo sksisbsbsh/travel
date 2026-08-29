@@ -27,6 +27,85 @@
 
 ## REGISTRY
 
+### BUG-0132 — Quote "Hitung Otomatis" booking ERP mengabaikan tarif per unit — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-A / routers/pricing.py (`POST /api/pricing/quote`)
+- Gejala        : Ops menekan "Hitung Otomatis" di form Buat Booking → angka yang tampil memakai
+                  tarif TIPE (mis. Hiace Premio 1.500.000) padahal unit terpilih punya tarif
+                  KHUSUS (`vehicles.day_rate` 1.650.000). Mesin penagih (create/approve/web)
+                  memakai `resolve_day_rate` → yang DITAGIH 2.100.000, yang DILIHAT 1.950.000.
+- Root Cause    : `/pricing/quote` hanya me-resolve `vehicle_id → type`, tidak memanggil
+                  `resolve_day_rate` (tarif unit > tarif tipe > default) — resolusi tarif
+                  diduplikasi separuh.
+- Gate penangkap: tidak ada (INV-PRICE-01 tak mencakup permukaan quote internal) → kini
+                  `verify_price_master.py` (INV-PRICE-02) mengunci `resolve_day_rate` di quote.
+- Perbaikan     : quote mengambil dokumen armada penuh + `resolve_day_rate`, day_rate diteruskan
+                  ke `compute_quote` — identik dgn mesin penagih.
+- Regression    : INV-PRICE-02 cek statik "quote memakai resolve_day_rate".
+- Status        : FIXED (bukti: curl quote = 2.100.000 = harga booking tersimpan; gate HIJAU)
+
+### BUG-0133 — Harga armada bisa DITULIS dari 2 halaman berbeda (tanpa master) — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-B / Pengaturan (pricing_rules) vs form Armada (day_rate + price_from)
+- Gejala        : Tarif diatur di Pengaturan→Aturan Harga DAN di form Tambah/Edit Armada.
+                  Dua pintu tulis saling menimpa, ops bingung mana yang berlaku (keluhan user).
+- Root Cause    : duplikasi jalur tulis; `price_from` (angka pemasaran mati) masih ikut form.
+- Gate penangkap: tidak ada → kini `verify_price_master.py` (INV-PRICE-02).
+- Perbaikan     : Master Harga TUNGGAL di Pengaturan (panel "Tarif Khusus per Unit",
+                  `GET/PATCH /api/pricing/unit-rates`); `day_rate`/`price_from` DIHAPUS dari
+                  VehicleCreate/VehicleUpdate + routers/vehicles.py; form Armada kini
+                  read-only reference yang menunjuk ke Master Harga.
+- Regression    : INV-PRICE-02 (schemas + router + FE form + endpoint master wajib ada).
+- Status        : FIXED (bukti: PATCH /vehicles dgn day_rate=9999999 → nilai TIDAK berubah)
+
+### BUG-0134 — Notif merah "berkas media hilang" PALSU (kegagalan cek dihitung hilang) — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-C / services/media_store.exists + /api/media/health + MediaBrowser
+- Gejala        : Banner merah "aset kehilangan berkas fisiknya" muncul padahal berkas ada.
+- Root Cause    : `exists()` bool: SEMUA kegagalan pengecekan (kunci objstore tak diset,
+                  gangguan jaringan, path mismatch/tidak sah, path kosong) dihitung sebagai
+                  "hilang". Tidak dibedakan "terbukti hilang" vs "cek gagal".
+- Gate penangkap: tidak ada (kelas false-positive) → perilaku dikunci di kode + docstring.
+- Perbaikan     : `check_file()` tri-state per `storage_backend` aset: missing = bukti nyata
+                  (404 objstore / file tak ada di disk lokal); unknown = cek gagal + alasan.
+                  `/media/health` mengembalikan keduanya; FE: merah hanya utk missing,
+                  kuning berALASAN utk unknown.
+- Regression    : `exists()` kini 'unknown ≠ hilang' (dipakai pemulih media).
+- Status        : FIXED (bukti: health missing=0 unknown=0 pada seed; kasus objstore tanpa
+                  kunci → unknown, bukan merah)
+
+### BUG-0135 — Destinasi booking ERP = teks bebas (pelanggaran SSOT, RC-E batch 1) — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-E / bookings.destination vs master `destinations`
+- Gejala        : "Bromo" vs "Gunung Bromo" vs "bromo " = 3 destinasi berbeda di laporan;
+                  paket/penawaran (sudah `destination_id`) tak pernah cocok dgn booking.
+- Root Cause    : input custom di 3 dialog booking ERP tanpa validasi server ke master.
+- Gate penangkap: tidak ada → kini `verify_ssot_relations.py` (INV-REF-02, statik+runtime).
+- Perbaikan     : validator satu pintu `refs.destination_or_400` (create/group/update; nilai
+                  disimpan NAMA KANONIK; edit lama tak dipaksa ganti bila tak diubah);
+                  selector FE `DestinationSelect` + `GET /bookings/destination-options`;
+                  migrasi `scripts/migrate_booking_destinations.py` (master ops status draft
+                  agar tak tayang di web + normalisasi 5 booking lama); seed dikanonikkan.
+- Regression    : INV-REF-02 + fixture guard lama diselaraskan (destination "Guard"→"Bali").
+- Status        : FIXED (bukti: POST destinasi 'Planet Mars' → 400 berALASAN; 'bali' → 'Bali')
+
+### BUG-0136 — UX driver cacat: tak ada Upcoming Trips & aksi jemput membingungkan — FIXED 2026-08-29
+- Tanggal       : 2026-08-29
+- Fase/Modul    : RC-D / DriverWorkspace + DriverTaskCard
+- Gejala        : Semua trip tampil rata (urut created_at) tanpa daftar upcoming; tombol
+                  "Mulai" langsung ke to_pickup lalu "Tiba di Tujuan" bisa ditekan bahkan
+                  sebelum penumpang naik — tidak ada tahap "penumpang dijemput".
+- Root Cause    : UI satu daftar tanpa state stepper; transisi on_trip tidak pernah
+                  dipakai driver (langsung to_pickup → completed).
+- Gate penangkap: — (UX) → diverifikasi testing agent.
+- Perbaikan     : Workspace v2: seksi Trip Aktif / Upcoming Trips (hari ini + mendatang,
+                  urut jadwal) / Riwayat; stepper standby → berangkat jemput (odometer) →
+                  penumpang naik (on_trip via `/trips/{id}/status` — state machine TUNGGAL,
+                  bukan jalur kedua) → tiba → check-out odometer (jalur `checkout` SSOT).
+                  RBAC scope driver tetap (hanya trip miliknya).
+- Regression    : memakai jalur transisi yang sudah dijaga RC-03 (finalize_trip_completion).
+- Status        : FIXED (bukti: screenshot workspace + testing agent)
+
 ### BUG-0131 — Isi artikel rich text tampil sebagai TAG MENTAH / paragraf pecah di halaman blog — FIXED 2026-08-17
 - Tanggal       : 2026-08-17
 - Fase/Modul    : CMS-09 (rich text) ↔ situs publik (`features/public/BlogDetail.jsx`)

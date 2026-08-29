@@ -95,6 +95,7 @@ run_gate "guard:media_safety (INV-MEDIA-02)" "python scripts/guardrails/verify_m
 # PENJAGANYA (membuktikan lewat 23 mutasi bahwa penjaga masih MERAH saat bug disuntikkan). Penjaga
 # yang tak pernah terbukti menggigit tak bisa dibedakan dari `return 0`.
 run_gate "guard:media_unified (INV-MEDIA-03)" "python scripts/guardrails/verify_media_unified.py"
+run_gate "guard:price_master (INV-PRICE-02)" "python scripts/guardrails/verify_price_master.py"
 run_gate "selftest:media_unified (INV-MEDIA-03 — uji mutasi)" "python scripts/guardrails/selftest_media_unified.py"
 run_gate "selftest:media_runtime (INV-MEDIA-04 — anti hijau-palsu)" "python scripts/guardrails/selftest_media_runtime.py"
 
@@ -127,6 +128,7 @@ if [ $AUTH_READY -eq 1 ]; then
   # ---- INTEGRITAS PILIHAN & REFERENSI (audit permintaan user): dropdown boleh apa saja di FE,
   #      tapi SERVER yang wajib menolak referensi hantu & pilihan di luar daftar ----
   run_gate "guard:reference_integrity (INV-REF-01)" "python scripts/guardrails/verify_reference_integrity.py"
+  run_gate "guard:ssot_relations (INV-REF-02)" "python scripts/guardrails/verify_ssot_relations.py"
   run_gate "selftest:booking_guards (INV-PRICE-01/BOOK-02/STR-01 — uji mutasi)" "python scripts/guardrails/selftest_booking_guards.py"
   # ---- SIKLUS HIDUP KONTEN CMS (fase CMS-CW3): hapus WAJIB bisa dibatalkan, penyuntingan
   #      WAJIB berjejak versi, dan perubahan slug WAJIB mengalihkan URL lama. Ketiganya
@@ -157,6 +159,7 @@ else
   skip_gate "guard:booking_public (INV-BOOK-02)" "auth belum ada / backend down"
   skip_gate "guard:string_bounds (INV-STR-01)" "auth belum ada / backend down"
   skip_gate "guard:reference_integrity (INV-REF-01)" "auth belum ada / backend down"
+  skip_gate "guard:ssot_relations (INV-REF-02)" "auth belum ada / backend down"
   skip_gate "selftest:booking_guards (uji mutasi)" "auth belum ada / backend down"
   skip_gate "guard:content_lifecycle (INV-CMS-01)" "auth belum ada / backend down"
   skip_gate "selftest:content_lifecycle (INV-CMS-01 — uji mutasi)" "auth belum ada / backend down"

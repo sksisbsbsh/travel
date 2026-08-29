@@ -49,6 +49,7 @@ export default function MediaBrowser({
   const [uploading, setUploading] = useState(0);
   const [progress, setProgress] = useState(0);
   const [missingIds, setMissingIds] = useState([]);
+  const [unknownAssets, setUnknownAssets] = useState([]);
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -87,8 +88,10 @@ export default function MediaBrowser({
     try {
       const data = await fetchHealth();
       setMissingIds((data.missing || []).map((m) => m.id));
+      setUnknownAssets(data.unknown || []);
     } catch {
       setMissingIds([]);
+      setUnknownAssets([]);
     }
   }, []);
 
@@ -303,9 +306,18 @@ export default function MediaBrowser({
         <p className="flex items-start gap-1.5 rounded-lg bg-[#FFF1F0] p-2 text-[12px] text-[#A8221A]"
           data-testid="media-missing-warning">
           <FileWarning size={13} className="mt-0.5 shrink-0" />
-          <span><b className="tabular-nums">{missingIds.length}</b> aset kehilangan berkas fisiknya
+          <span><b className="tabular-nums">{missingIds.length}</b> aset TERBUKTI kehilangan berkas fisiknya
             (ditandai di kisi). Pilih asetnya lalu pakai <b>Ganti berkas</b> untuk memulihkan tanpa
             menyunting ulang halaman yang memakainya.</span>
+        </p>
+      ) : null}
+      {unknownAssets.length ? (
+        <p className="flex items-start gap-1.5 rounded-lg bg-[#FFF8EC] p-2 text-[12px] text-[#8A5300]"
+          data-testid="media-unknown-warning">
+          <AlertCircle size={13} className="mt-0.5 shrink-0" />
+          <span><b className="tabular-nums">{unknownAssets.length}</b> aset tidak bisa diverifikasi
+            (bukan berarti hilang) — {unknownAssets[0]?.reason || "pengecekan penyimpanan gagal"}.
+            Coba muat ulang; bila berulang, periksa konfigurasi penyimpanan.</span>
         </p>
       ) : null}
 

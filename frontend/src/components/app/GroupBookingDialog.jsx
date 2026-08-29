@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatters";
+import DestinationSelect from "@/components/app/DestinationSelect";
 
 function toIso(localValue) {
   if (!localValue) return "";
@@ -218,8 +219,8 @@ export default function GroupBookingDialog({ open, onOpenChange, onCreated }) {
                         <Input value={u.origin} onChange={(e) => setUnit(idx, { origin: e.target.value })} placeholder="Bandung" data-testid={`gb-origin-${idx}`} />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11px] font-semibold text-[#6B6B73]">Tujuan</label>
-                        <Input value={u.destination} onChange={(e) => setUnit(idx, { destination: e.target.value })} placeholder="Bali" data-testid={`gb-destination-${idx}`} />
+                        <label className="mb-1 block text-[11px] font-semibold text-[#6B6B73]">Tujuan (master destinasi)</label>
+                        <DestinationSelect value={u.destination} onChange={(v) => setUnit(idx, { destination: v })} testId={`gb-destination-${idx}`} />
                       </div>
                     </div>
                     <div>

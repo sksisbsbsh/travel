@@ -172,3 +172,30 @@ async def finalize_trip_completion(db, trip: dict, user=None, odometer_end=None)
             await db.drivers.update_one({"id": did}, {"$set": {"status": "offline"}})
 
     return safe_doc(await db.trips.find_one({"id": trip_id}, {"_id": 0}))
+
+
+async def release_booking_resources(db, booking):
+    """RC-04: saat booking di-cancel/reject — batalkan trip terkait yang belum jalan &
+    bebaskan armada/driver bila tak ada tugas aktif lain. Idempotent & defensif.
+    (Dipindah dari routers/bookings.py — SSOT pelepasan sumber daya kini satu file dgn
+    finalize_trip_completion.)"""
+    bkid = booking["id"]
+    active = ["standby", "to_pickup", "on_trip"]
+    await db.trips.update_many(
+        {"booking_id": bkid, "status": {"$nin": ["completed", "cancelled"]}},
+        {"$set": {"status": "cancelled"}})
+    vid = booking.get("vehicle_id")
+    if vid:
+        other_active = await db.trips.find_one(
+            {"vehicle_id": vid, "booking_id": {"$ne": bkid}, "status": {"$in": active}},
+            {"_id": 0, "id": 1})
+        veh = await db.vehicles.find_one({"id": vid}, {"_id": 0, "status": 1})
+        if not other_active and veh and veh.get("status") == "on_trip":
+            await db.vehicles.update_one({"id": vid}, {"$set": {"status": "available"}})
+    did = booking.get("driver_id")
+    if did:
+        other_drv = await db.trips.find_one(
+            {"driver_id": did, "booking_id": {"$ne": bkid}, "status": {"$in": active}},
+            {"_id": 0, "id": 1})
+        if not other_drv:
+            await db.drivers.update_one({"id": did}, {"$set": {"status": "offline"}})

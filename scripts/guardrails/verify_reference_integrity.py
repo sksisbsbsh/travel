@@ -156,17 +156,17 @@ def runtime_checks(g: Guard, token: str) -> None:  # noqa: C901
     p.poison("booking customer_id hantu", "POST", "/bookings",
              {"customer_id": GHOST["customers"], "vehicle_id": vid,
               "start_datetime": start.isoformat(), "end_datetime": end.isoformat(),
-              "origin": "Bandung", "destination": "Guard", "base_price": 1000000},
+              "origin": "Bandung", "destination": "Bali", "base_price": 1000000},
              collection="bookings", expect_reject_words=("customer", "pelanggan"))
     p.poison("booking vehicle_id hantu", "POST", "/bookings",
              {"customer_id": cid, "vehicle_id": GHOST["vehicles"],
               "start_datetime": start.isoformat(), "end_datetime": end.isoformat(),
-              "origin": "Bandung", "destination": "Guard", "base_price": 1000000},
+              "origin": "Bandung", "destination": "Bali", "base_price": 1000000},
              collection="bookings", expect_reject_words=("armada", "vehicle"))
     p.poison("booking driver_id hantu", "POST", "/bookings",
              {"customer_id": cid, "vehicle_id": vid, "driver_id": GHOST["drivers"],
               "start_datetime": start.isoformat(), "end_datetime": end.isoformat(),
-              "origin": "Bandung", "destination": "Guard", "base_price": 1000000},
+              "origin": "Bandung", "destination": "Bali", "base_price": 1000000},
              collection="bookings", expect_reject_words=("driver", "sopir"))
     p.poison("payment booking_id hantu", "POST", "/payments",
              {"booking_id": GHOST["bookings"], "amount": 10000, "type": "dp"},

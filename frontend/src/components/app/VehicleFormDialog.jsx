@@ -33,6 +33,8 @@ const EMPTY = {
   price_from: "", day_rate: "", publish_to_web: true, year: "", color: "", highlights: "", photos: [], gallery: [], tour_scenes: [],
   ownership: "owned", partner_id: "",
 };
+// RC-B (INV-PRICE-02): `price_from`/`day_rate` tinggal READ-ONLY di sini — jalur tulisnya
+// hanya Pengaturan → Master Harga. Form ini tidak lagi mengirim field harga apa pun.
 
 export default function VehicleFormDialog({ open, onOpenChange, initial, onSaved }) {
   const editing = Boolean(initial && initial.id);
@@ -89,8 +91,7 @@ export default function VehicleFormDialog({ open, onOpenChange, initial, onSaved
       kir_expiry: form.kir_expiry || null, tax_expiry: form.tax_expiry || null,
       next_service_date: form.next_service_date || null,
       odometer: Number(form.odometer) || 0, notes: form.notes,
-      // Konten web (URL-based, P10/FASE 5)
-      price_from: Number(form.price_from) || 0, day_rate: Number(form.day_rate) || 0,
+      // Konten web (URL-based, P10/FASE 5) — harga TIDAK dikirim dari form ini (INV-PRICE-02)
       publish_to_web: Boolean(form.publish_to_web), year: Number(form.year) || 0, color: form.color,
       ownership: form.ownership || "owned",
       partner_id: form.ownership === "partner" ? (form.partner_id || "") : "",
@@ -209,16 +210,16 @@ export default function VehicleFormDialog({ open, onOpenChange, initial, onSaved
             {showWeb ? (
               <div className="space-y-3 border-t border-border p-3" data-testid="vf-web-section">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <Label>Harga Mulai (Rp)</Label>
-                    <Input type="number" value={form.price_from} onChange={(e) => set("price_from", e.target.value)} placeholder="1500000" data-testid="vf-price" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Tarif resmi / hari (Rp) — dipakai mesin harga</Label>
-                    <Input type="number" value={form.day_rate} onChange={(e) => set("day_rate", e.target.value)} placeholder="Kosongkan = pakai tarif tipe di Pengaturan" data-testid="vf-day-rate" />
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Tarif resmi / hari</Label>
+                    <div className="rounded-[10px] border border-[#E5E5EA] bg-[#F7F8FA] px-3 py-2.5 text-[13px] text-[#1C1C1E]" data-testid="vf-day-rate">
+                      {Number(form.day_rate) > 0
+                        ? `Rp ${Number(form.day_rate).toLocaleString("id-ID")} / hari (tarif khusus unit)`
+                        : "Memakai tarif per tipe (lihat Pengaturan → Master Harga)"}
+                    </div>
                     <p className="text-[11.5px] text-[#8E8E93]">
-                      Bila diisi, tarif ini MENIMPA tarif per tipe armada dan menjadi harga yang
-                      ditampilkan di website maupun yang ditagihkan.
+                      Harga hanya bisa diubah di <b>Pengaturan → Aturan Harga (Master Harga)</b> —
+                      satu pintu agar tidak ada dua sumber harga yang saling menimpa.
                     </p>
                   </div>
                   <div className="space-y-1.5">

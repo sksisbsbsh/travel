@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatters";
+import DestinationSelect from "@/components/app/DestinationSelect";
 
 function toIso(localValue) {
   if (!localValue) return "";
@@ -159,8 +160,8 @@ export default function BookingFormDialog({ open, onOpenChange, onCreated, initi
               <Input value={form.origin} onChange={(e) => set("origin", e.target.value)} placeholder="Bandung" data-testid="bf-origin" />
             </div>
             <div>
-              <label className="mb-1 block text-[12px] font-semibold text-[#6B6B73]">Tujuan</label>
-              <Input value={form.destination} onChange={(e) => set("destination", e.target.value)} placeholder="Bali" data-testid="bf-destination" />
+              <label className="mb-1 block text-[12px] font-semibold text-[#6B6B73]">Tujuan (master destinasi)</label>
+              <DestinationSelect value={form.destination} onChange={(v) => set("destination", v)} testId="bf-destination" />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

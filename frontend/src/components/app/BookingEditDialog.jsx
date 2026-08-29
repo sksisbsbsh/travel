@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DestinationSelect from "@/components/app/DestinationSelect";
 
 // Edit ringan booking (driver/asal/tujuan/catatan). Tanggal & harga tidak diubah di sini
 // agar invarian INV-1/INV-4 stabil (gunakan batal + booking baru untuk reschedule).
@@ -69,8 +70,8 @@ export default function BookingEditDialog({ open, onOpenChange, booking, onSaved
               <Input value={form.origin} onChange={(e) => set("origin", e.target.value)} data-testid="be-origin" />
             </div>
             <div className="space-y-1.5">
-              <Label>Tujuan</Label>
-              <Input value={form.destination} onChange={(e) => set("destination", e.target.value)} data-testid="be-destination" />
+              <Label>Tujuan (master destinasi)</Label>
+              <DestinationSelect value={form.destination} onChange={(v) => set("destination", v)} testId="be-destination" />
             </div>
           </div>
           <div className="space-y-1.5">

@@ -132,19 +132,26 @@ async def import_legacy(user=Depends(MEDIA)):
 async def media_health(user=Depends(MEDIA)):
     """Aset yang dokumennya ada tetapi BERKASNYA hilang di penyimpanan.
 
-    Ini bukan kasus teoretis: berkas biner tidak ikut ter-commit, jadi pada pod baru hasil clone
-    bersih semua gambar 404 sementara database tampak sehat. Panel ini membuat masalah itu terlihat
-    (dan bisa diperbaiki dengan unggah ulang / ganti berkas) alih-alih gagal senyap.
+    RC-C (BUG-0134): kesehatan aset kini TRI-STATE per `storage_backend` aset:
+      missing = TERBUKTI hilang (404 objstore / file tak ada di disk) → merah,
+      unknown = pengecekan GAGAL (kunci tak diset, jaringan, path mismatch) → kuning + alasan.
+    Dulu semua kegagalan cek dihitung "hilang" → notif merah palsu padahal berkas ada.
     """
     db = get_db()
     rows = await db[ml.MEDIA].find({"deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
-    missing = []
+    missing, unknown = [], []
     for row in rows:
-        if not ms.exists(row.get("storage_path") or "", backend=row.get("storage_backend") or ""):
-            missing.append({"id": row.get("id"),
-                            "original_filename": row.get("original_filename") or row.get("id"),
-                            "kind": row.get("kind"), "folder_id": row.get("folder_id") or ""})
+        state, reason = ms.check_file(row.get("storage_path") or "",
+                                      backend=row.get("storage_backend") or "")
+        if state == "ok":
+            continue
+        item = {"id": row.get("id"),
+                "original_filename": row.get("original_filename") or row.get("id"),
+                "kind": row.get("kind"), "folder_id": row.get("folder_id") or "",
+                "storage_backend": row.get("storage_backend") or "", "reason": reason}
+        (missing if state == "missing" else unknown).append(item)
     return {"total": len(rows), "missing_count": len(missing), "missing": missing[:100],
+            "unknown_count": len(unknown), "unknown": unknown[:100],
             "storage": ms.storage_info()}
 
 

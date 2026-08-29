@@ -1,7 +1,18 @@
 # 🤝 HANDOFF — Rahaza Travel ERP
 
 > **Bahasa kerja: Indonesia.** Agent berikutnya WAJIB merespons user dalam Bahasa Indonesia.
-> **Diperbarui:** 2026-08-12 (**FASE 7 / UI-READABILITY**: kontrak keterbacaan kaca & tema portal, 3 halaman publik diperkaya dari data nyata, CTA blog diperbaiki, posisi chat, brand → **RahazaTrans**, guardrail baru **INV-THEME-01**; gate **HIJAU 40/40**). Riwayat sesi sebelumnya: BOOKING-V2 — lihat §0.4.)
+> **Diperbarui:** 2026-08-29 (**SESI RC-A..RC-E**: 5 keluhan user diperbaiki — BUG-0132..0136 di
+> `memory/BUG_REGISTRY.md`. (1) RC-A: `/pricing/quote` kini `resolve_day_rate` (angka yang dilihat
+> ops = yang ditagih); (2) RC-B: **Master Harga tunggal** — `day_rate`/`price_from` DIHAPUS dari
+> jalur tulis armada, tarif unit hanya via Pengaturan → panel `UnitRatesPanel`
+> (`GET/PATCH /api/pricing/unit-rates`), dikunci guardrail baru **INV-PRICE-02**; (3) RC-C: media
+> health tri-state (`media_store.check_file`) — merah hanya utk berkas TERBUKTI hilang, kasus
+> ambigu = kuning berALASAN; (4) RC-D: Driver Workspace v2 — Upcoming Trips + stepper
+> standby→jemput→on_trip (via `/trips/{id}/status`, state machine TUNGGAL)→tiba→checkout;
+> (5) RC-E batch 1: `bookings.destination` = relasi master `destinations` (validator
+> `refs.destination_or_400`, selector FE `DestinationSelect`, migrasi
+> `scripts/migrate_booking_destinations.py`, guardrail baru **INV-REF-02**). Gate **HIJAU penuh**
+> (0 FAIL 0 SKIP, incl. 2 gate baru). Riwayat sesi sebelumnya: FASE 7 — lihat §0.5.)
 > **GOLDEN RULE:** Tidak ada klaim "selesai" tanpa `bash scripts/gate.sh` **HIJAU penuh (0 FAIL, 0 SKIP)** dan receipt `memory/GATE_RECEIPT.md`. SKIP ≠ PASS.
 
 ---

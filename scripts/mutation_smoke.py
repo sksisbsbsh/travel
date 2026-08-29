@@ -223,7 +223,7 @@ async def run():
         start = datetime.now(timezone.utc) + timedelta(days=10)
         end = start + timedelta(days=2)
         bk_payload = {"customer_id": cust_id, "vehicle_id": veh_id, "origin": "Bandung",
-                      "destination": "Bromo", "start_datetime": iso(start), "end_datetime": iso(end),
+                      "destination": "Gunung Bromo", "start_datetime": iso(start), "end_datetime": iso(end),
                       "base_price": 3000000}
         sc, bk = await post(client, h, "/api/bookings", bk_payload)
         if sc >= 500:

@@ -13,6 +13,7 @@ import AutomationSettings from "@/components/app/AutomationSettings";
 import BookingFlowPanel from "@/components/app/BookingFlowPanel";
 import TransferRoutesPanel from "@/components/app/TransferRoutesPanel";
 import WhatsAppSettings from "@/components/app/WhatsAppSettings";
+import UnitRatesPanel from "@/components/app/UnitRatesPanel";
 
 function Section({ icon: Icon, title, desc, children, onSave, saving, testId }) {
   return (
@@ -159,7 +160,7 @@ export default function Settings() {
 
       <Section icon={Calculator} title="Aturan Harga (Pricing Engine)" testId="settings-pricing-rules"
         saving={saving === "pricing_rules"} onSave={saveRules}
-        desc="Tarif dasar per tipe armada, jasa driver & tol/parkir per hari, surcharge akhir pekan & hari libur. SATU sumber harga untuk kalkulator publik, pemesanan online, penawaran, dan auto-hitung booking. Catatan: komponen berbasis JARAK sudah dihapus — harga digerakkan jumlah HARI (tarif per unit di form Armada menimpa tarif tipe di sini).">
+        desc="Tarif dasar per tipe armada, jasa driver & tol/parkir per hari, surcharge akhir pekan & hari libur. SATU sumber harga untuk kalkulator publik, pemesanan online, penawaran, dan auto-hitung booking. Tarif KHUSUS per unit hanya diubah lewat panel Master Harga di bawah (form Armada read-only — tidak ada pintu tulis kedua).">
         <div>
           <Label>Tarif Sewa per Hari (Rp)</Label>
           <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -183,6 +184,7 @@ export default function Settings() {
           <Field label="DP Saran (%)"><Input type="number" value={rules.dp_percent ?? ""} onChange={(e) => rf("dp_percent", e.target.value)} data-testid="set-rules-dp" /></Field>
           <Field label="Pembulatan (Rp)"><Input type="number" value={rules.rounding ?? ""} onChange={(e) => rf("rounding", e.target.value)} placeholder="1000" data-testid="set-rounding" /></Field>
         </div>
+        <UnitRatesPanel />
       </Section>
 
       <Section icon={CalendarDays} title="Kalender Operasional" testId="settings-operational"

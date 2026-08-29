@@ -258,7 +258,7 @@ async def run():
     base = 3000000; addons = [{"label": "Overtime", "amount": 500000}]
     total = base + sum(a["amount"] for a in addons)
     bk = {"id": new_id("bk"), "code": "BK-0001", "customer_id": cus[0]["id"], "vehicle_id": veh[0]["id"],
-          "driver_id": drv[0]["id"], "origin": "Bandung", "destination": "Bromo",
+          "driver_id": drv[0]["id"], "origin": "Bandung", "destination": "Gunung Bromo",
           "start_datetime": iso(datetime.now(timezone.utc) + timedelta(days=3)),
           "end_datetime": iso(datetime.now(timezone.utc) + timedelta(days=5)),
           "base_price": base, "add_ons": addons, "total_amount": total, "paid_amount": 1000000,
@@ -556,6 +556,16 @@ async def run():
                 "best_time": best_time, "lat": lat, "lng": lng, "tour_scenes": [],
                 "popular": popular, "created_at": now_iso()}
 
+    await db.destinations.insert_many([
+        # INV-REF-02: destinasi OPERASIONAL (master utk booking ERP) — status 'draft' agar
+        # TIDAK tayang di situs publik (visibility_filter menuntut 'published').
+        {"id": new_id("dst"), "slug": "bandung", "name": "Bandung", "region": "jawa_barat",
+         "status": "draft", "source": "ops", "description": "Destinasi operasional (antar-kota).",
+         "created_at": now_iso()},
+        {"id": new_id("dst"), "slug": "jakarta", "name": "Jakarta", "region": "dki",
+         "status": "draft", "source": "ops", "description": "Destinasi operasional (antar-kota).",
+         "created_at": now_iso()},
+    ])
     await db.destinations.insert_many([
         _dest("bali", "Bali", "bali",
               "Pulau Dewata: pura ikonik, pantai sunset, dan budaya yang hidup. Cocok untuk wisata keluarga & korporat.",

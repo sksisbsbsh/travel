@@ -2,7 +2,7 @@
 
 > Bukti verifikasi otomatis. Dihasilkan `scripts/gate.sh`. JANGAN edit manual.
 
-- **Waktu:** 2026-08-18 14:00:05
+- **Waktu:** 2026-08-29 17:07:44
 - **Backend:** RUNNING + auth siap (gate runtime dijalankan)
 
 | Gate | Hasil |
@@ -27,6 +27,7 @@
 | guard:landing_contract (INV-LP-02) | PASS |
 | guard:media_safety (INV-MEDIA-02) | PASS |
 | guard:media_unified (INV-MEDIA-03) | PASS |
+| guard:price_master (INV-PRICE-02) | PASS |
 | selftest:media_unified (INV-MEDIA-03 — uji mutasi) | PASS |
 | selftest:media_runtime (INV-MEDIA-04 — anti hijau-palsu) | PASS |
 | guard:theme_contrast (INV-THEME-01) | PASS |
@@ -46,6 +47,7 @@
 | guard:booking_public (INV-BOOK-02) | PASS |
 | guard:string_bounds (INV-STR-01) | PASS |
 | guard:reference_integrity (INV-REF-01) | PASS |
+| guard:ssot_relations (INV-REF-02) | PASS |
 | selftest:booking_guards (INV-PRICE-01/BOOK-02/STR-01 — uji mutasi) | PASS |
 | guard:content_lifecycle (INV-CMS-01) | PASS |
 | selftest:content_lifecycle (INV-CMS-01 — uji mutasi) | PASS |
